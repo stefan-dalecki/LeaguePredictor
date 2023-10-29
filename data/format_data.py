@@ -134,12 +134,12 @@ def write_games(data: dict, out_dir: str)->None:
     """
     winner_data = dict()
     
-    matchId = data[round]["metadata"]["matchId"]
     for i, round in enumerate(data): 
+        matchId = data[round]["metadata"]["matchId"]
         try:
             df = make_ts_df(data[round])
             test = make_cumulative(df, group_cols="team", val_cols=_TEAM_COLS) 
-            test.reset_index().to_parquet(os.path.join(out_dir, matchId))
+            test.reset_index().to_parquet(Path(out_dir)/f"{matchId}.parquet")
             
             winner_data[matchId] = get_winner(data[round])
         # TODO: Make print into logger
@@ -148,7 +148,7 @@ def write_games(data: dict, out_dir: str)->None:
             print("file failed")
         if i%5 == 0:
             print(f"On {i}/{len(data)}")
-    pd.DataFrame.from_dict(winner_data, orient="index").rename(columns={0:"winner"}).to_parquet(os.path.join(out_dir, "win_log.pqt"))
+    pd.DataFrame.from_dict(winner_data, orient="index").rename(columns={0:"winner"}).to_parquet(Path(out_dir)/"win_log.parquet")
     
     
         
@@ -186,11 +186,11 @@ def make_outcome_data(matches:List[str], dir:Path = Path("."))->Tuple[np.ndarray
 # For training script https://scikit-learn.org/stable/modules/neural_networks_supervised.html
 
 if __name__ == "__main__":
-    DIR = r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data"
-    # for j in range(3):
-    #     with open(os.path.join(DIR, f"faker_norms_data_{j}.json")) as json_file:
-    #         data = json.load(json_file)
-    #     write_games(data, out_dir=os.path.join(DIR, "matches"))
+    DIR = Path(r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw")
+    for j in range(3):
+        with open(DIR/f"faker_norms_data_{j}.json") as json_file:
+            data = json.load(json_file)
+        write_games(data, out_dir=DIR.parent/"matches")
     
     print("all done")
                     

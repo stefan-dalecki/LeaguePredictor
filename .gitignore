@@ -1,0 +1,10 @@
+# Data 
+*.csv
+*.parquet
+*.pqt
+*.json
+
+# Environment stuff
+*.env
+
+

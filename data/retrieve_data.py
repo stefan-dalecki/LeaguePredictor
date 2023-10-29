@@ -1,8 +1,15 @@
+
 import requests
 import json
+import os
+
+from dotenv import load_dotenv
 from enum import Enum
 
-API_KEY = 'RGAPI-da963f38-ca1e-4b41-9b02-2540e93f39a7'
+load_dotenv()
+API_KEY = os.getenv("RIOT_API_KEY")
+# To generate a key go to this web address, make an account, and regenerate a developement api key
+# https://developer.riotgames.com/
 
 RIOT_PARAMS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
@@ -97,4 +104,4 @@ def get_game_history(username: str, country:Country = Country.korea, region: Reg
     
 # TODO: This code doesn't have a way of systematically retrieving different data. right now if we ran get_game_history it would grab 20 games and forever grab the same games. We need a way to systematically grab other data for the same players
 if __name__ == "__main__":
-    get_game_history("Faker", filename=r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\faker_norms_data_2.json", type = Type.normal, start = 200, count = 100)
+    get_game_history("Faker", filename=r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw\faker_norms_data_1.json", type = Type.normal, start = 100, count = 100)
