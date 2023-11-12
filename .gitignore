@@ -1,4 +1,4 @@
-# Data 
+# Data
 *.csv
 *.parquet
 *.pqt
@@ -6,5 +6,4 @@
 
 # Environment stuff
 *.env
-
-
+venv*
