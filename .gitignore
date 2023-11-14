@@ -7,3 +7,6 @@
 # Environment stuff
 *.env
 venv*
+
+# cython files
+*.pyc

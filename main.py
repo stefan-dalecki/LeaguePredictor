@@ -4,86 +4,29 @@ from abc import ABC
 
 from pathlib import Path
 
+from src.format_data import DummyData
+from src.reader_writer import ParquetRW
+from src.train_model import TrainerEvaluator
+
+
 if __name__ == "__main__":
     # Preprocess/Gather data
-    def gather_data(path: Path | str) -> None:
-        """
-        Gather a bunch of the raw data and put it in the path dir (could make path a default relative path)
+    # def gather_data(path: Path | str) -> None:
+    #     """
+    #     Gather a bunch of the raw data and put it in the path dir (could make path a default relative path)
 
-        :param path: _description_
-        """
-        pass
-
-    # TODO: This file should be renamed to something more descriptive
+    #     :param path: _description_
+    #     """
+    #     pass
 
     # Gather data (Pull in raw data)
     #   Should just ping Riot for json responses
 
-    class rw_data(ABC):
-        def __init__(self) -> None:
-            file_end = ".csv"
-            super().__init__()
+    data, outcomes = DummyData.format_json({})
 
-        def read_data(path: Path):
-            pass
+    out_df = Path(__file__).parent / "data" / "processed" / "first_df"
+    ParquetRW.write_data(data, out_df)
 
-        def write_data(path: Path):
-            pass
-
-    class parquet_rw(rw_data):
-        def __init__(self) -> None:
-            file_end = ".parquet"
-            super().__init__()
-
-        def read_data(path: Path):
-            pass
-
-        def write_data(path: Path):
-            pass
-
-    class db_rw(rw_data):
-        pass
-
-
-#   Ouptut Types:
-#       - Csv
-#       - parquet
-#       - sql
-
-
-class TrainerEvaluator:
-    def __init__(
-        self, data: np.array, split: float = 0.2, layers: int = 2, size: int = 10
-    ) -> None:
-        self.data = data
-        self.split = split
-        self.layers = layers
-        self.size = size
-
-    def train():
-        pass
-
-    def evaluate():
-        pass
-
-
-# Train on data
-#   Inputs -
-#       - Data format class
-#       - Data to train on
-#       - Size to make the network
-
-# Evaluate the training
-#   Inputs
-#       - new data
-#   Outputs
-#       - what fraction of the snapshots were correct
-#       - What snapshot the game was not wrong after
-
-# Optimize Training
-#   Inputs -
-#       - Data format class
-#       - Data to train on
-#   Explores
-#       - Size and depth of network
-#       - Could extend this to take a path to raw data and explore how different aggregations fair at predicting at different points in the game
+    dnn_model = TrainerEvaluator(data.values, outcomes)
+    dnn_model.train()
+    accuracy = dnn_model.evaluate()

@@ -9,8 +9,6 @@ from abc import ABC
 from pathlib import Path
 from typing import List, Tuple
 
-import retrieve_data
-
 # We'll want to consider several things eventually, cs, gold/gold per min, objectives, KDA (by member), etc. . However, these data aren't logged cumulatively, so we'll need to pull these out
 
 _TEAMS = np.array([100, 200])
@@ -198,6 +196,13 @@ def write_games(data: dict, out_dir: str) -> None:
 
 
 def format_snapshots(data: pd.DataFrame) -> np.ndarray:
+    """
+    Return a numpy array where the first n/2 columns come from team one's data the second half comes from
+    team 2's data and each row is a snapshot of the game at a particular time
+
+    :param data: _description_
+    :return: _description_
+    """
     rows = data.shape[0]
     cols = data.shape[1]
 
@@ -224,34 +229,37 @@ def make_outcome_data(
     return final_snapshots, outcomes
 
 
-class data_aggregator(ABC):
+class DataAggregator(ABC):
     def format_json(raw_data: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
         pass
 
 
-class dummy_data(data_aggregator):
+class DummyData(DataAggregator):
 
     col_names = ["something", "other"]
 
     @staticmethod
-    def make_dummy_data():
-
-        return pd.DataFrame()
+    def make_dummy_data(n: int = 10_000) -> pd.DataFrame:
+        data = np.random.randint(0, 100, (n, len(DummyData.col_names)))
+        df = pd.DataFrame(columns=DummyData.col_names, data=data)
+        return df
 
     @staticmethod
     def format_json(raw_data):
-        return self.make_dummy_data()
+        data = DummyData.make_dummy_data()
+        wins = np.random.choice(2, len(data))
+        return data, wins
 
 
-class team_aggregation(data_aggregator):
+class TeamAggregator(DataAggregator):
     pass
 
 
-class role_aggregation(data_aggregator):
+class RoleAggregator(DataAggregator):
     pass
 
 
-class player_aggregation(data_aggregator):
+class PlayerAggregator(DataAggregator):
     pass
 
 
