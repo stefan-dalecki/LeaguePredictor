@@ -1,10 +1,11 @@
+import json
 import numpy as np
 import pandas as pd
 from abc import ABC
 
 from pathlib import Path
 
-from src.format_data import DummyData
+from src.format_data import DummyData, TeamAggregator
 from src.reader_writer import ParquetRW
 from src.train_model import TrainerEvaluator
 
@@ -22,11 +23,19 @@ if __name__ == "__main__":
     # Gather data (Pull in raw data)
     #   Should just ping Riot for json responses
 
-    data, outcomes = DummyData.format_json({})
+    model = TeamAggregator()
+    data_dir = Path("data") / "raw"
+    for j in range(3):
+        with open(data_dir / f"faker_norms_data_{j}.json") as json_file:
+            data = json.load(json_file)
+        model.format_json(data)
 
-    out_df = Path(__file__).parent / "data" / "processed" / "first_df"
-    ParquetRW.write_data(data, out_df)
+    storage_path = Path(__file__).parent / "data" / "processed" / "aggregated_games"
+    ParquetRW.write_data(model.df, storage_path)
 
-    dnn_model = TrainerEvaluator(data.values, outcomes)
+    dnn_model = TrainerEvaluator(
+        model.df.reset_index().drop("game_id", axis=1).dropna(axis=0, how="any").values,
+        model.outcomes.values.reshape((len(model.outcomes),)).astype(int),
+    )
     dnn_model.train()
     accuracy = dnn_model.evaluate()

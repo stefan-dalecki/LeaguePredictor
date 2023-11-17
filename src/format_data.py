@@ -1,7 +1,6 @@
 import json
 import pandas as pd
 import numpy as np
-import os
 
 import pandas as pd
 from abc import ABC
@@ -91,7 +90,7 @@ def make_ts_df(data: dict):
         # Gather team/event level data
         for event in events:
             event_type = event["type"]
-            if event_type in _EVENT_MAP:
+            if event_type in TeamAggregator.event_map:
                 try:
                     team = (
                         event["teamId"]
@@ -127,7 +126,8 @@ def make_ts_df(data: dict):
                     ] += 1
                 elif event_type == "BUILDING_KILL":
                     ts_data.loc[i].loc[
-                        team, _EVENT_MAP[event_type][event["buildingType"]]
+                        team,
+                        TeamAggregator.event_map[event_type][event["buildingType"]],
                     ] += 1
 
                 # TODO: assert that team kills lte opposite teams deaths
@@ -262,9 +262,21 @@ class DummyData(DataAggregator):
 
 
 class TeamAggregator(DataAggregator):
-    columns = {}
+    columns = [
+        "cs",
+        "gold",
+        "tower",
+        "inhibitor",
+        "dragon",
+        "riftherald",
+        "baron",
+        "elder",
+        "kills",
+        "assists",
+        "deaths",
+    ]
     index = ["game_id", "timestamp"]
-    _EVENT_MAP = {
+    event_map = {
         "BUILDING_KILL": {
             "TOWER_BUILDING": "tower",
             "INHIBITOR_BUILDING": "inhibitor",
@@ -282,56 +294,41 @@ class TeamAggregator(DataAggregator):
         },
     }
 
-    DECISION_COLS = [
-        "cs",
-        "gold",
-        "tower",
-        "inhibitor",
-        "dragon",
-        "riftherald",
-        "baron",
-        "elder",
-        "kills",
-        "assists",
-        "deaths",
-    ]
-
-    def get_dict_vals(dic, vals=[], rec=True):
-        for val in dic.values():
-            if type(val) == dict:
-                get_dict_vals(val, vals)
-            else:
-                vals.append(val)
-        return vals
-
-    _PLAYER_COLS = ["cs", "gold"]
-    _TEAM_COLS = get_dict_vals(_EVENT_MAP)
+    team_columns = [f"{col}_{team}" for col in columns for team in _TEAMS]
+    multi_index = pd.MultiIndex.from_tuples([], names=index)
 
     def __init__(self) -> None:
-        multi_index = pd.MultiIndex.from_tuples([], names=TeamAggregator.index)
-        self.df = pd.DataFrame(columns=TeamAggregator.columns, index=multi_index)
-        self.outcomes = pd.DataFrame(columns=["outcome"], index=multi_index)
+        self.df = pd.DataFrame(
+            columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
+        )
+        self.outcomes = pd.DataFrame(
+            columns=["outcome"], index=TeamAggregator.multi_index
+        )
         super().__init__()
 
-    def add_frame(self, idx: tuple[str, str], frame: list[dict]) -> pd.DataFrame:
-        events = frame["events"]
-        player_frames = frame["participantFrames"]
+    @staticmethod
+    def add_frame(
+        df: pd.DataFrame, idx: tuple[str, str], frame: list[dict]
+    ) -> pd.DataFrame:
+        # TODO: This doesn't actually need to know about the dataframe. It should just return an ordered series that we add to the df in the add_game function
+        events = frame["events"] or []
+        player_frames = frame["participantFrames"] or dict()
 
-        self.df.loc[idx, :] = 0
+        df.loc[idx, :] = 0
 
         # Add data from player snapshots
-        for player in player_frames:
+        for player in player_frames.values():
             team = _ID_TEAM_MAP[player["participantId"]]
-            self.df.loc[idx, f"cs_{team}"] += (
+            df.loc[idx, f"cs_{team}"] += (
                 player["jungleMinionsKilled"] + player["minionsKilled"]
             )
-            self.df.loc[idx, f"total_gold_{team}"] += player["totalGold"]
+            df.loc[idx, f"gold_{team}"] += player["totalGold"]
             # TODO: XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
 
         # Add data from event snapshots
         for event in events:
             event_type = event["type"]
-            if event_type not in _EVENT_MAP:
+            if event_type not in TeamAggregator.event_map:
                 continue
             try:
                 team = (
@@ -344,44 +341,53 @@ class TeamAggregator(DataAggregator):
                 continue
 
             # CONTINUE HERE
+            if event_type == "ELITE_MONSTER_KILL":
+                monster = TeamAggregator.event_map[event_type][event["monsterType"]]
+                df.loc[idx, f"{monster}_{team}"] += 1
+            if event_type == "BUILDING_KILL":
+                monster = TeamAggregator.event_map[event_type][event["buildingType"]]
+                df.loc[idx, f"{monster}_{team}"] += 1
             if event_type == "CHAMPION_KILL":
                 killed_team = _ID_TEAM_MAP[event["victimId"]]
                 if killed_team == team:
                     print("what the")
-
                 # assert killed_team != team
 
-                pos_metrics = ["killerId", "assistingParticipantIds"]
-                neg_metrics = ["victimId"]
-                ts_data.loc[i].loc[
-                    team, [_EVENT_MAP[event_type][metric] for metric in pos_metrics]
-                ] += [
-                    1,
-                    len(event.get(pos_metrics[1], [])),
-                ]
-                ts_data.loc[i].loc[
-                    killed_team,
-                    [_EVENT_MAP[event_type][metric] for metric in neg_metrics],
-                ] += [1]
-            elif event_type == "ELITE_MONSTER_KILL":
-                ts_data.loc[i].loc[
-                    team, _EVENT_MAP[event_type][event["monsterType"]]
-                ] += 1
-            elif event_type == "BUILDING_KILL":
-                ts_data.loc[i].loc[
-                    team, _EVENT_MAP[event_type][event["buildingType"]]
-                ] += 1
+                df.loc[idx, f"kills_{team}"] += 1
+                df.loc[idx, f"assists_{team}"] += len(
+                    event.get("assistingParticipantIds", [])
+                )
+                df.loc[idx, f"deaths_{killed_team}"] += 1
 
-    def format_game(self, game: dict[str, dict]) -> pd.DataFrame:
+    @staticmethod
+    def format_game(game: dict[str, dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
+
+        game_df = pd.DataFrame(
+            columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
+        )
+        outcomes = pd.DataFrame(columns=["outcome"], index=TeamAggregator.multi_index)
+
         game_id = game["info"]["gameId"]
         frames = game["info"]["frames"]
+
+        winner = get_winner(game)
         for frame in frames:
             idx = (game_id, frame["timestamp"])
-            self.add_frame(idx, frame)
+            TeamAggregator.add_frame(game_df, idx, frame)
+            outcomes.loc[idx, "outcome"] = winner
+        game_df = game_df.agg(np.cumsum)
+        return game_df, outcomes
 
     def format_json(self, raw_data: dict[str, dict]) -> pd.DataFrame:
-        for game in raw_data:
-            self.format_game(game)
+        for game in raw_data.values():
+            try:
+                game_df, outcome_df = self.format_game(game)
+            except KeyError:
+                # The format of the game was malformed (eg we got a message in our json instead of a game)
+                continue
+            self.df = pd.concat([self.df, game_df])
+            self.outcomes = pd.concat([self.outcomes, outcome_df])
+        # TODO: Explore how aggregation of the results changes the outcomes
 
 
 class RoleAggregator(DataAggregator):
@@ -402,9 +408,11 @@ if __name__ == "__main__":
     DIR = Path(
         r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw"
     )
+    model = TeamAggregator()
     for j in range(3):
         with open(DIR / f"faker_norms_data_{j}.json") as json_file:
             data = json.load(json_file)
-        write_games(data, out_dir=DIR.parent / "matches")
+        model.format_json(data)
+        # write_games(data, out_dir=DIR.parent / "matches")
 
     print("all done")
