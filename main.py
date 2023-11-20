@@ -33,9 +33,7 @@ if __name__ == "__main__":
     storage_path = Path(__file__).parent / "data" / "processed" / "aggregated_games"
     ParquetRW.write_data(model.df, storage_path)
 
-    dnn_model = TrainerEvaluator(
-        model.df.reset_index().drop("game_id", axis=1).dropna(axis=0, how="any").values,
-        model.outcomes.values.reshape((len(model.outcomes),)).astype(int),
-    )
+    X, y = model.prepare_train()
+    dnn_model = TrainerEvaluator(X.astype(float), y, size=10, layers=2)
     dnn_model.train()
     accuracy = dnn_model.evaluate()

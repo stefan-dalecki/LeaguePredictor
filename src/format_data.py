@@ -14,124 +14,124 @@ _TEAMS = np.array([100, 200])
 
 _ID_TEAM_MAP = dict(zip(range(1, 11), np.repeat(_TEAMS, 5)))
 
-_EVENT_MAP = {
-    "BUILDING_KILL": {
-        "TOWER_BUILDING": "tower",
-        "INHIBITOR_BUILDING": "inhibitor",
-    },
-    "ELITE_MONSTER_KILL": {
-        "DRAGON": "dragon",
-        "RIFTHERALD": "riftherald",
-        "BARON_NASHOR": "baron",
-        "ELDER_DRAGON": "elder",
-    },
-    "CHAMPION_KILL": {
-        "killerId": "kills",
-        "assistingParticipantIds": "assists",
-        "victimId": "deaths",
-    },
-}
+# _EVENT_MAP = {
+#     "BUILDING_KILL": {
+#         "TOWER_BUILDING": "tower",
+#         "INHIBITOR_BUILDING": "inhibitor",
+#     },
+#     "ELITE_MONSTER_KILL": {
+#         "DRAGON": "dragon",
+#         "RIFTHERALD": "riftherald",
+#         "BARON_NASHOR": "baron",
+#         "ELDER_DRAGON": "elder",
+#     },
+#     "CHAMPION_KILL": {
+#         "killerId": "kills",
+#         "assistingParticipantIds": "assists",
+#         "victimId": "deaths",
+#     },
+# }
 
-DECISION_COLS = [
-    "cs",
-    "gold",
-    "tower",
-    "inhibitor",
-    "dragon",
-    "riftherald",
-    "baron",
-    "elder",
-    "kills",
-    "assists",
-    "deaths",
-]
-
-
-def get_dict_vals(dic, vals=[], rec=True):
-    for val in dic.values():
-        if type(val) == dict:
-            get_dict_vals(val, vals)
-        else:
-            vals.append(val)
-    return vals
+# DECISION_COLS = [
+#     "cs",
+#     "gold",
+#     "tower",
+#     "inhibitor",
+#     "dragon",
+#     "riftherald",
+#     "baron",
+#     "elder",
+#     "kills",
+#     "assists",
+#     "deaths",
+# ]
 
 
-_PLAYER_COLS = ["cs", "gold"]
-_TEAM_COLS = get_dict_vals(_EVENT_MAP)
+# def get_dict_vals(dic, vals=[], rec=True):
+#     for val in dic.values():
+#         if type(val) == dict:
+#             get_dict_vals(val, vals)
+#         else:
+#             vals.append(val)
+#     return vals
 
 
-def make_ts_df(data: dict):
-    try:
-        frames = data["info"]["frames"]
-    except KeyError:
-        return pd.DataFrame()
+# _PLAYER_COLS = ["cs", "gold"]
+# _TEAM_COLS = get_dict_vals(_EVENT_MAP)
 
-    # Make DF with index for frame and team
 
-    ind = pd.MultiIndex.from_product(
-        [range(len(frames)), _TEAMS], names=["frame", "team"]
-    )
-    ts_data = pd.DataFrame(0, index=ind, columns=_PLAYER_COLS + _TEAM_COLS)
-    for i, frame in enumerate(frames):
-        events = frame["events"]
-        players = frame["participantFrames"]
+# def make_ts_df(data: dict):
+#     try:
+#         frames = data["info"]["frames"]
+#     except KeyError:
+#         return pd.DataFrame()
 
-        # Gather and aggregate player level data
-        # XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
-        for player in players:
-            ts_data.loc[i].loc[
-                _ID_TEAM_MAP[players[player]["participantId"]], _PLAYER_COLS
-            ] += [
-                players[player]["jungleMinionsKilled"]
-                + players[player]["minionsKilled"],
-                players[player]["totalGold"],
-            ]
+#     # Make DF with index for frame and team
 
-        # Gather team/event level data
-        for event in events:
-            event_type = event["type"]
-            if event_type in TeamAggregator.event_map:
-                try:
-                    team = (
-                        event["teamId"]
-                        if "teamId" in event
-                        else _ID_TEAM_MAP[event["killerId"]]
-                    )
-                except KeyError:
-                    # TODO: make this a logger
-                    # print("No matching team found. Skipping")
-                    continue
-                if event_type == "CHAMPION_KILL":
-                    killed_team = _ID_TEAM_MAP[event["victimId"]]
-                    if killed_team == team:
-                        print("what the")
+#     ind = pd.MultiIndex.from_product(
+#         [range(len(frames)), _TEAMS], names=["frame", "team"]
+#     )
+#     ts_data = pd.DataFrame(0, index=ind, columns=_PLAYER_COLS + _TEAM_COLS)
+#     for i, frame in enumerate(frames):
+#         events = frame["events"]
+#         players = frame["participantFrames"]
 
-                    # assert killed_team != team
+#         # Gather and aggregate player level data
+#         # XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
+#         for player in players:
+#             ts_data.loc[i].loc[
+#                 _ID_TEAM_MAP[players[player]["participantId"]], _PLAYER_COLS
+#             ] += [
+#                 players[player]["jungleMinionsKilled"]
+#                 + players[player]["minionsKilled"],
+#                 players[player]["totalGold"]/(3000*5),#Roughly the cost of one completed item
+#             ]
 
-                    pos_metrics = ["killerId", "assistingParticipantIds"]
-                    neg_metrics = ["victimId"]
-                    ts_data.loc[i].loc[
-                        team, [_EVENT_MAP[event_type][metric] for metric in pos_metrics]
-                    ] += [
-                        1,
-                        len(event.get(pos_metrics[1], [])),
-                    ]
-                    ts_data.loc[i].loc[
-                        killed_team,
-                        [_EVENT_MAP[event_type][metric] for metric in neg_metrics],
-                    ] += [1]
-                elif event_type == "ELITE_MONSTER_KILL":
-                    ts_data.loc[i].loc[
-                        team, _EVENT_MAP[event_type][event["monsterType"]]
-                    ] += 1
-                elif event_type == "BUILDING_KILL":
-                    ts_data.loc[i].loc[
-                        team,
-                        TeamAggregator.event_map[event_type][event["buildingType"]],
-                    ] += 1
+#         # Gather team/event level data
+#         for event in events:
+#             event_type = event["type"]
+#             if event_type in TeamAggregator.event_map:
+#                 try:
+#                     team = (
+#                         event["teamId"]
+#                         if "teamId" in event
+#                         else _ID_TEAM_MAP[event["killerId"]]
+#                     )
+#                 except KeyError:
+#                     # TODO: make this a logger
+#                     # print("No matching team found. Skipping")
+#                     continue
+#                 if event_type == "CHAMPION_KILL":
+#                     killed_team = _ID_TEAM_MAP[event["victimId"]]
+#                     if killed_team == team:
+#                         print("what the")
 
-                # TODO: assert that team kills lte opposite teams deaths
-    return ts_data
+#                     # assert killed_team != team
+
+#                     pos_metrics = ["killerId", "assistingParticipantIds"]
+#                     neg_metrics = ["victimId"]
+#                     ts_data.loc[i].loc[
+#                         team, [_EVENT_MAP[event_type][metric] for metric in pos_metrics]
+#                     ] += [
+#                         1,
+#                         len(event.get(pos_metrics[1], [])),
+#                     ]
+#                     ts_data.loc[i].loc[
+#                         killed_team,
+#                         [_EVENT_MAP[event_type][metric] for metric in neg_metrics],
+#                     ] += [1]
+#                 elif event_type == "ELITE_MONSTER_KILL":
+#                     ts_data.loc[i].loc[
+#                         team, _EVENT_MAP[event_type][event["monsterType"]]
+#                     ] += 1
+#                 elif event_type == "BUILDING_KILL":
+#                     ts_data.loc[i].loc[
+#                         team,
+#                         TeamAggregator.event_map[event_type][event["buildingType"]],
+#                     ] += 1
+
+#                 # TODO: assert that team kills lte opposite teams deaths
+#     return ts_data
 
 
 # def get_winner(data: dict):
@@ -155,88 +155,88 @@ def get_winner(game: dict[str, dict]) -> int:
     return game["info"]["frames"][-1]["events"][-1]["winningTeam"]
 
 
-def make_cumulative(df: pd.DataFrame, group_cols: List[str], val_cols: List[str]):
-    try:
-        output = df.copy()
-        holder = df.groupby(group_cols)
-        for col in val_cols:
-            if col in df.columns:
-                output[col] = holder[col].cumsum()
-        return output
-    except KeyError:
-        return pd.DataFrame()
+# def make_cumulative(df: pd.DataFrame, group_cols: List[str], val_cols: List[str]):
+#     try:
+#         output = df.copy()
+#         holder = df.groupby(group_cols)
+#         for col in val_cols:
+#             if col in df.columns:
+#                 output[col] = holder[col].cumsum()
+#         return output
+#     except KeyError:
+#         return pd.DataFrame()
 
 
-# TODO: Add format option (default pqt) for the output files
-def write_games(data: dict, out_dir: str) -> None:
-    """Wite out the cumulative timeseries data by game into out_dir
+# # TODO: Add format option (default pqt) for the output files
+# def write_games(data: dict, out_dir: str) -> None:
+#     """Wite out the cumulative timeseries data by game into out_dir
 
-    Args:
-        data (dict): A dictionary of timeseries data gathered from RIOT's Timeseries data API
-        out_dir (str): Path to the location to write the outputs (outputs written by game id)
-    """
-    winner_data = dict()
+#     Args:
+#         data (dict): A dictionary of timeseries data gathered from RIOT's Timeseries data API
+#         out_dir (str): Path to the location to write the outputs (outputs written by game id)
+#     """
+#     winner_data = dict()
 
-    for i, round in enumerate(data):
-        matchId = data[round]["metadata"]["matchId"]
-        try:
-            df = make_ts_df(data[round])
-            test = make_cumulative(df, group_cols="team", val_cols=_TEAM_COLS)
-            test.reset_index().to_parquet(Path(out_dir) / f"{matchId}.parquet")
+#     for i, round in enumerate(data):
+#         matchId = data[round]["metadata"]["matchId"]
+#         try:
+#             df = make_ts_df(data[round])
+#             test = make_cumulative(df, group_cols="team", val_cols=_TEAM_COLS)
+#             test.reset_index().to_parquet(Path(out_dir) / f"{matchId}.parquet")
 
-            winner_data[matchId] = get_winner(data[round])
-        # TODO: Make print into logger
-        # TODO make except a non broad except and return it
-        except:
-            print("file failed")
-        if i % 5 == 0:
-            print(f"On {i}/{len(data)}")
-    pd.DataFrame.from_dict(winner_data, orient="index").rename(
-        columns={0: "winner"}
-    ).to_parquet(Path(out_dir) / "win_log.parquet")
-
-
-# TODO: Make function that reads in each game data, makes an array of 1xMetrics (one for each team) for each frame of the differences between teams on each metric
-# and makes a corresponding array of 1xMetrics for which team won
-# TODO: figure out what parameters would allow the model to have harder classifications at the begining and end (eg more sure 50/50 at start and more sure 100/0 at end)
+#             winner_data[matchId] = get_winner(data[round])
+#         # TODO: Make print into logger
+#         # TODO make except a non broad except and return it
+#         except:
+#             print("file failed")
+#         if i % 5 == 0:
+#             print(f"On {i}/{len(data)}")
+#     pd.DataFrame.from_dict(winner_data, orient="index").rename(
+#         columns={0: "winner"}
+#     ).to_parquet(Path(out_dir) / "win_log.parquet")
 
 
-# TODO: make a function that calls the above for all matches in matches history folder, and appends it to have an array
-# of arrays. length of matches*frames of arrays of length Metrics. Should output an X and y dataset to train on
+# # TODO: Make function that reads in each game data, makes an array of 1xMetrics (one for each team) for each frame of the differences between teams on each metric
+# # and makes a corresponding array of 1xMetrics for which team won
+# # TODO: figure out what parameters would allow the model to have harder classifications at the begining and end (eg more sure 50/50 at start and more sure 100/0 at end)
 
 
-def format_snapshots(data: pd.DataFrame) -> np.ndarray:
-    """
-    Return a numpy array where the first n/2 columns come from team one's data the second half comes from
-    team 2's data and each row is a snapshot of the game at a particular time
-
-    :param data: _description_
-    :return: _description_
-    """
-    rows = data.shape[0]
-    cols = data.shape[1]
-
-    assert rows % 2 == 0
-
-    frames = data.values.reshape((rows // 2, cols * 2))
-
-    return frames
+# # TODO: make a function that calls the above for all matches in matches history folder, and appends it to have an array
+# # of arrays. length of matches*frames of arrays of length Metrics. Should output an X and y dataset to train on
 
 
-def make_outcome_data(
-    matches: List[str], dir: Path = Path(".")
-) -> Tuple[np.ndarray, np.ndarray]:
-    win_log = pd.read_parquet(dir / "win_log.pqt")
-    outcomes = np.zeros(len(matches))
-    final_snapshots = np.zeros((len(matches), len(DECISION_COLS) * 2))
+# def format_snapshots(data: pd.DataFrame) -> np.ndarray:
+#     """
+#     Return a numpy array where the first n/2 columns come from team one's data the second half comes from
+#     team 2's data and each row is a snapshot of the game at a particular time
 
-    for i, match in enumerate(matches):
-        game_data = pd.read_parquet(match, columns=DECISION_COLS)
-        frames = format_snapshots(game_data)
-        final_snapshots[i] = frames[-1]
-        outcomes[i] = win_log.loc[match.stem] == 100
+#     :param data: _description_
+#     :return: _description_
+#     """
+#     rows = data.shape[0]
+#     cols = data.shape[1]
 
-    return final_snapshots, outcomes
+#     assert rows % 2 == 0
+
+#     frames = data.values.reshape((rows // 2, cols * 2))
+
+#     return frames
+
+
+# def make_outcome_data(
+#     matches: List[str], dir: Path = Path(".")
+# ) -> Tuple[np.ndarray, np.ndarray]:
+#     win_log = pd.read_parquet(dir / "win_log.pqt")
+#     outcomes = np.zeros(len(matches))
+#     final_snapshots = np.zeros((len(matches), len(DECISION_COLS) * 2))
+
+#     for i, match in enumerate(matches):
+#         game_data = pd.read_parquet(match, columns=DECISION_COLS)
+#         frames = format_snapshots(game_data)
+#         final_snapshots[i] = frames[-1]
+#         outcomes[i] = win_log.loc[match.stem] == 100
+
+#     return final_snapshots, outcomes
 
 
 class DataAggregator(ABC):
@@ -275,6 +275,17 @@ class TeamAggregator(DataAggregator):
         "assists",
         "deaths",
     ]
+    cum_cols = [
+        "tower",
+        "inhibitor",
+        "dragon",
+        "riftherald",
+        "baron",
+        "elder",
+        "kills",
+        "assists",
+        "deaths",
+    ]
     index = ["game_id", "timestamp"]
     event_map = {
         "BUILDING_KILL": {
@@ -295,6 +306,7 @@ class TeamAggregator(DataAggregator):
     }
 
     team_columns = [f"{col}_{team}" for col in columns for team in _TEAMS]
+    cum_team_cols = [f"{col}_{team}" for col in cum_cols for team in _TEAMS]
     multi_index = pd.MultiIndex.from_tuples([], names=index)
 
     def __init__(self) -> None:
@@ -321,8 +333,8 @@ class TeamAggregator(DataAggregator):
             team = _ID_TEAM_MAP[player["participantId"]]
             df.loc[idx, f"cs_{team}"] += (
                 player["jungleMinionsKilled"] + player["minionsKilled"]
-            )
-            df.loc[idx, f"gold_{team}"] += player["totalGold"]
+            ) / (idx[1] * 30 * 20 * 5 / 10)
+            df.loc[idx, f"gold_{team}"] += player["totalGold"] / (3000 * 5)
             # TODO: XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
 
         # Add data from event snapshots
@@ -353,11 +365,11 @@ class TeamAggregator(DataAggregator):
                     print("what the")
                 # assert killed_team != team
 
-                df.loc[idx, f"kills_{team}"] += 1
-                df.loc[idx, f"assists_{team}"] += len(
-                    event.get("assistingParticipantIds", [])
+                df.loc[idx, f"kills_{team}"] += 1 / 20
+                df.loc[idx, f"assists_{team}"] += (
+                    len(event.get("assistingParticipantIds", [])) / 40
                 )
-                df.loc[idx, f"deaths_{killed_team}"] += 1
+                df.loc[idx, f"deaths_{killed_team}"] += 1 / 20
 
     @staticmethod
     def format_game(game: dict[str, dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -371,11 +383,14 @@ class TeamAggregator(DataAggregator):
         frames = game["info"]["frames"]
 
         winner = get_winner(game)
-        for frame in frames:
-            idx = (game_id, frame["timestamp"])
+        second_half_frames = frames[int(len(frames) / 2) :]
+        for frame in second_half_frames:
+            idx = (game_id, frame["timestamp"] / (60 * 1000 * 30))
             TeamAggregator.add_frame(game_df, idx, frame)
-            outcomes.loc[idx, "outcome"] = winner
-        game_df = game_df.agg(np.cumsum)
+            outcomes.loc[idx, "outcome"] = winner / 100 - 1
+        game_df.loc[:, TeamAggregator.cum_team_cols] = game_df.loc[
+            :, TeamAggregator.cum_team_cols
+        ].agg(np.cumsum)
         return game_df, outcomes
 
     def format_json(self, raw_data: dict[str, dict]) -> pd.DataFrame:
@@ -388,6 +403,14 @@ class TeamAggregator(DataAggregator):
             self.df = pd.concat([self.df, game_df])
             self.outcomes = pd.concat([self.outcomes, outcome_df])
         # TODO: Explore how aggregation of the results changes the outcomes
+
+    def normalize(self):
+        pass
+
+    def prepare_train(self) -> tuple[np.ndarray, np.ndarray]:
+        X = self.df.reset_index().drop("game_id", axis=1).values
+        y = self.outcomes.values.reshape((len(self.outcomes),)).astype(int)
+        return X, y
 
 
 class RoleAggregator(DataAggregator):
