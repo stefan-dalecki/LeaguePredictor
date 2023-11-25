@@ -6,7 +6,6 @@ import pandas as pd
 from abc import ABC
 
 from pathlib import Path
-from typing import List, Tuple
 
 # We'll want to consider several things eventually, cs, gold/gold per min, objectives, KDA (by member), etc. . However, these data aren't logged cumulatively, so we'll need to pull these out
 
@@ -262,36 +261,10 @@ class DummyData(DataAggregator):
 
 
 class TeamAggregator(DataAggregator):
-    columns = [
-        "cs",
-        "gold",
-        "tower",
-        "inhibitor",
-        "dragon",
-        "riftherald",
-        "baron",
-        "elder",
-        "kills",
-        "assists",
-        "deaths",
-    ]
-    cum_cols = [
-        "tower",
-        "inhibitor",
-        "dragon",
-        "riftherald",
-        "baron",
-        "elder",
-        "kills",
-        "assists",
-        "deaths",
-    ]
+    # TODO: Make these into a single dict that maps all these attributes to avoid 
+    # duplicate rows for naming
     index = ["game_id", "timestamp"]
     event_map = {
-        "BUILDING_KILL": {
-            "TOWER_BUILDING": "tower",
-            "INHIBITOR_BUILDING": "inhibitor",
-        },
         "ELITE_MONSTER_KILL": {
             "DRAGON": "dragon",
             "RIFTHERALD": "riftherald",
@@ -304,8 +277,92 @@ class TeamAggregator(DataAggregator):
             "victimId": "deaths",
         },
     }
+    
+    standard_values = {
+        "cs":{
+            'norm_val': 10*30*5,# Could instead normalize to CS per minute
+            'pre_agg': True,
+            'event_map':None, 
+            }, 
+        "gold":{
+            'norm_val': 3000*5, # Average cost per item
+            'pre_agg': True,
+            'event_map':None, 
+            },
+        "tower": {
+            'norm_val': 8, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'BUILDING_KILL',
+                'event_name':'TOWER_BUILDING',
+                }, 
+            }, 
+        "inhibitor": {
+            'norm_val': 3, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'BUILDING_KILL',
+                'event_name':'INHIBITOR_BUILDING',
+                }, 
+            }, 
+        "dragon": {
+            'norm_val': 4, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'ELITE_MONSTER_KILL',
+                'event_name':'DRAGON',
+                }, 
+            }, 
+        "riftherald": {
+            'norm_val': 1, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'ELITE_MONSTER_KILL',
+                'event_name':'RIFTHERALD',
+                }, 
+            }, 
+        "baron": {
+            'norm_val': 1, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'ELITE_MONSTER_KILL',
+                'event_name':'BARON_NASHOR',
+                }, 
+            }, 
+        "elder": {
+            'norm_val': 1, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'ELITE_MONSTER_KILL',
+                'event_name':'ELDER_DRAGON',
+                }, 
+            },
+        "kills": {
+            'norm_val': 15, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'CHAMPION_KILL',
+                'event_name':'killerId',
+                }, 
+            },
+        "assists": {
+            'norm_val': 39, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'CHAMPION_KILL',
+                'event_name':'assistingParticipantIds',
+                }, 
+            },
+        "deaths": {
+            'norm_val': 15, 
+            'pre_agg': False,
+            'event_map':{
+                'event_type':'CHAMPION_KILL',
+                'event_name':'victimId',
+                }, 
+            },
+    }
 
-    team_columns = [f"{col}_{team}" for col in columns for team in _TEAMS]
     cum_team_cols = [f"{col}_{team}" for col in cum_cols for team in _TEAMS]
     multi_index = pd.MultiIndex.from_tuples([], names=index)
 
@@ -317,6 +374,36 @@ class TeamAggregator(DataAggregator):
             columns=["outcome"], index=TeamAggregator.multi_index
         )
         super().__init__()
+        
+    @property
+    @classmethod
+    def event_map(cls):
+        events = dict()
+        for key, value in cls.standard_values.values:
+            if not value.get('event_map'):
+                continue
+            event_type = value['event_map']['event_type']
+            event_name = value['event_map']['event_name']
+            if events.get(event_type):
+                events[event_type][event_name] = key
+            else:
+                events[event_type] = {event_name: key}
+        return events
+    
+    @property
+    @classmethod
+    def normal_df(cls):
+        pass
+    
+    @property
+    @classmethod
+    def team_columns(cls):
+        return [f"{col}_{team}" for col in cls.standard_values for team in _TEAMS]
+    
+    @property
+    @classmethod
+    def cum_columns(cls):
+        return [f"{col}_{team}" for col in cls.standard_values for team in _TEAMS if not cls.standard_values['col']['pre_agg']]
 
     @staticmethod
     def add_frame(
@@ -333,9 +420,11 @@ class TeamAggregator(DataAggregator):
             team = _ID_TEAM_MAP[player["participantId"]]
             df.loc[idx, f"cs_{team}"] += (
                 player["jungleMinionsKilled"] + player["minionsKilled"]
-            ) / (idx[1] * 30 * 20 * 5 / 10)
-            df.loc[idx, f"gold_{team}"] += player["totalGold"] / (3000 * 5)
+            )
+            df.loc[idx, f"gold_{team}"] += player["totalGold"] 
             # TODO: XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
+            # Would maybe be easier to do with just lv difference, but at a minute scale it would be hard
+            # To catch the difference
 
         # Add data from event snapshots
         for event in events:
@@ -365,11 +454,11 @@ class TeamAggregator(DataAggregator):
                     print("what the")
                 # assert killed_team != team
 
-                df.loc[idx, f"kills_{team}"] += 1 / 20
+                df.loc[idx, f"kills_{team}"] += 1
                 df.loc[idx, f"assists_{team}"] += (
-                    len(event.get("assistingParticipantIds", [])) / 40
+                    len(event.get("assistingParticipantIds", []))
                 )
-                df.loc[idx, f"deaths_{killed_team}"] += 1 / 20
+                df.loc[idx, f"deaths_{killed_team}"] += 1
 
     @staticmethod
     def format_game(game: dict[str, dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -405,7 +494,11 @@ class TeamAggregator(DataAggregator):
         # TODO: Explore how aggregation of the results changes the outcomes
 
     def normalize(self):
-        pass
+        normalizer = pd.DataFrame(TeamAggregator.standard_values.values, index= self.df.index, columns=TeamAggregator.columns)
+        
+        # Assume we can get the data into a pandas dataframe with the same columsn
+        
+        self.df = self.df.div(normalizer)
 
     def prepare_train(self) -> tuple[np.ndarray, np.ndarray]:
         X = self.df.reset_index().drop("game_id", axis=1).values
