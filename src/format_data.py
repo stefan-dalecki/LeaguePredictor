@@ -261,110 +261,114 @@ class DummyData(DataAggregator):
 
 
 class TeamAggregator(DataAggregator):
-    # TODO: Make these into a single dict that maps all these attributes to avoid 
+    # TODO: Make these into a single dict that maps all these attributes to avoid
     # duplicate rows for naming
     index = ["game_id", "timestamp"]
-    event_map = {
-        "ELITE_MONSTER_KILL": {
-            "DRAGON": "dragon",
-            "RIFTHERALD": "riftherald",
-            "BARON_NASHOR": "baron",
-            "ELDER_DRAGON": "elder",
-        },
-        "CHAMPION_KILL": {
-            "killerId": "kills",
-            "assistingParticipantIds": "assists",
-            "victimId": "deaths",
-        },
-    }
-    
     standard_values = {
-        "cs":{
-            'norm_val': 10*30*5,# Could instead normalize to CS per minute
-            'pre_agg': True,
-            'event_map':None, 
-            }, 
-        "gold":{
-            'norm_val': 3000*5, # Average cost per item
-            'pre_agg': True,
-            'event_map':None, 
-            },
+        "cs": {
+            "norm_val": 10 * 30 * 5,  # Could instead normalize to CS per minute
+            "pre_agg": True,
+            "event_map": None,
+        },
+        "gold": {
+            "norm_val": 3000 * 5,  # Average cost per item
+            "pre_agg": True,
+            "event_map": None,
+        },
         "tower": {
-            'norm_val': 8, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'BUILDING_KILL',
-                'event_name':'TOWER_BUILDING',
-                }, 
-            }, 
+            "norm_val": 8,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "BUILDING_KILL",
+                "event_name": "TOWER_BUILDING",
+            },
+        },
         "inhibitor": {
-            'norm_val': 3, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'BUILDING_KILL',
-                'event_name':'INHIBITOR_BUILDING',
-                }, 
-            }, 
+            "norm_val": 3,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "BUILDING_KILL",
+                "event_name": "INHIBITOR_BUILDING",
+            },
+        },
         "dragon": {
-            'norm_val': 4, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'ELITE_MONSTER_KILL',
-                'event_name':'DRAGON',
-                }, 
-            }, 
+            "norm_val": 4,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "ELITE_MONSTER_KILL",
+                "event_name": "DRAGON",
+            },
+        },
         "riftherald": {
-            'norm_val': 1, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'ELITE_MONSTER_KILL',
-                'event_name':'RIFTHERALD',
-                }, 
-            }, 
+            "norm_val": 1,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "ELITE_MONSTER_KILL",
+                "event_name": "RIFTHERALD",
+            },
+        },
         "baron": {
-            'norm_val': 1, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'ELITE_MONSTER_KILL',
-                'event_name':'BARON_NASHOR',
-                }, 
-            }, 
+            "norm_val": 1,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "ELITE_MONSTER_KILL",
+                "event_name": "BARON_NASHOR",
+            },
+        },
         "elder": {
-            'norm_val': 1, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'ELITE_MONSTER_KILL',
-                'event_name':'ELDER_DRAGON',
-                }, 
+            "norm_val": 1,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "ELITE_MONSTER_KILL",
+                "event_name": "ELDER_DRAGON",
             },
+        },
         "kills": {
-            'norm_val': 15, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'CHAMPION_KILL',
-                'event_name':'killerId',
-                }, 
+            "norm_val": 15,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "CHAMPION_KILL",
+                "event_name": "killerId",
             },
+        },
         "assists": {
-            'norm_val': 39, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'CHAMPION_KILL',
-                'event_name':'assistingParticipantIds',
-                }, 
+            "norm_val": 39,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "CHAMPION_KILL",
+                "event_name": "assistingParticipantIds",
             },
+        },
         "deaths": {
-            'norm_val': 15, 
-            'pre_agg': False,
-            'event_map':{
-                'event_type':'CHAMPION_KILL',
-                'event_name':'victimId',
-                }, 
+            "norm_val": 15,
+            "pre_agg": False,
+            "event_map": {
+                "event_type": "CHAMPION_KILL",
+                "event_name": "victimId",
             },
+        },
     }
 
-    cum_team_cols = [f"{col}_{team}" for col in cum_cols for team in _TEAMS]
+    columns = list(standard_values.keys())
+    team_columns = [f"{col}_{team}" for col in standard_values for team in _TEAMS]
+    cum_columns = [
+        f"{col}_{team}"
+        for col, params in standard_values.items()
+        for team in _TEAMS
+        if not params["pre_agg"]
+    ]
     multi_index = pd.MultiIndex.from_tuples([], names=index)
+
+    event_map = dict()
+    for key, value in standard_values.items():
+        if not value.get("event_map"):
+            continue
+        event_type = value["event_map"]["event_type"]
+        event_name = value["event_map"]["event_name"]
+        if event_map.get(event_type):
+            event_map[event_type][event_name] = key
+        else:
+            event_map[event_type] = {event_name: key}
 
     def __init__(self) -> None:
         self.df = pd.DataFrame(
@@ -374,36 +378,11 @@ class TeamAggregator(DataAggregator):
             columns=["outcome"], index=TeamAggregator.multi_index
         )
         super().__init__()
-        
-    @property
-    @classmethod
-    def event_map(cls):
-        events = dict()
-        for key, value in cls.standard_values.values:
-            if not value.get('event_map'):
-                continue
-            event_type = value['event_map']['event_type']
-            event_name = value['event_map']['event_name']
-            if events.get(event_type):
-                events[event_type][event_name] = key
-            else:
-                events[event_type] = {event_name: key}
-        return events
-    
+
     @property
     @classmethod
     def normal_df(cls):
         pass
-    
-    @property
-    @classmethod
-    def team_columns(cls):
-        return [f"{col}_{team}" for col in cls.standard_values for team in _TEAMS]
-    
-    @property
-    @classmethod
-    def cum_columns(cls):
-        return [f"{col}_{team}" for col in cls.standard_values for team in _TEAMS if not cls.standard_values['col']['pre_agg']]
 
     @staticmethod
     def add_frame(
@@ -421,7 +400,7 @@ class TeamAggregator(DataAggregator):
             df.loc[idx, f"cs_{team}"] += (
                 player["jungleMinionsKilled"] + player["minionsKilled"]
             )
-            df.loc[idx, f"gold_{team}"] += player["totalGold"] 
+            df.loc[idx, f"gold_{team}"] += player["totalGold"]
             # TODO: XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
             # Would maybe be easier to do with just lv difference, but at a minute scale it would be hard
             # To catch the difference
@@ -455,8 +434,8 @@ class TeamAggregator(DataAggregator):
                 # assert killed_team != team
 
                 df.loc[idx, f"kills_{team}"] += 1
-                df.loc[idx, f"assists_{team}"] += (
-                    len(event.get("assistingParticipantIds", []))
+                df.loc[idx, f"assists_{team}"] += len(
+                    event.get("assistingParticipantIds", [])
                 )
                 df.loc[idx, f"deaths_{killed_team}"] += 1
 
@@ -477,8 +456,8 @@ class TeamAggregator(DataAggregator):
             idx = (game_id, frame["timestamp"] / (60 * 1000 * 30))
             TeamAggregator.add_frame(game_df, idx, frame)
             outcomes.loc[idx, "outcome"] = winner / 100 - 1
-        game_df.loc[:, TeamAggregator.cum_team_cols] = game_df.loc[
-            :, TeamAggregator.cum_team_cols
+        game_df.loc[:, TeamAggregator.cum_columns] = game_df.loc[
+            :, TeamAggregator.cum_columns
         ].agg(np.cumsum)
         return game_df, outcomes
 
@@ -491,13 +470,20 @@ class TeamAggregator(DataAggregator):
                 continue
             self.df = pd.concat([self.df, game_df])
             self.outcomes = pd.concat([self.outcomes, outcome_df])
+        self.normalize()
         # TODO: Explore how aggregation of the results changes the outcomes
 
     def normalize(self):
-        normalizer = pd.DataFrame(TeamAggregator.standard_values.values, index= self.df.index, columns=TeamAggregator.columns)
-        
+        vals = np.repeat(
+            [param["norm_val"] for param in TeamAggregator.standard_values.values()], 2
+        )
+        data = dict(zip(TeamAggregator.team_columns, vals))
+        normalizer = pd.DataFrame(
+            data, index=self.df.index, columns=TeamAggregator.team_columns
+        )
+
         # Assume we can get the data into a pandas dataframe with the same columsn
-        
+
         self.df = self.df.div(normalizer)
 
     def prepare_train(self) -> tuple[np.ndarray, np.ndarray]:
@@ -529,6 +515,7 @@ if __name__ == "__main__":
         with open(DIR / f"faker_norms_data_{j}.json") as json_file:
             data = json.load(json_file)
         model.format_json(data)
+        model.normalize()
         # write_games(data, out_dir=DIR.parent / "matches")
 
     print("all done")
