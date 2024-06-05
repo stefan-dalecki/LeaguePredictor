@@ -453,6 +453,8 @@ class TeamAggregator(DataAggregator):
         winner = get_winner(game)
         second_half_frames = frames[int(len(frames) / 2) :]
         for frame in second_half_frames:
+            # Normalize the timestamp here since it is also the index and would be difficult to 
+            # modify later
             idx = (game_id, frame["timestamp"] / (60 * 1000 * 30))
             TeamAggregator.add_frame(game_df, idx, frame)
             outcomes.loc[idx, "outcome"] = winner / 100 - 1
@@ -470,7 +472,7 @@ class TeamAggregator(DataAggregator):
                 continue
             self.df = pd.concat([self.df, game_df])
             self.outcomes = pd.concat([self.outcomes, outcome_df])
-        self.normalize()
+        self.normalize() # TODO: this normalizes the whole dataframe everytime when it shouldn't
         # TODO: Explore how aggregation of the results changes the outcomes
 
     def normalize(self):

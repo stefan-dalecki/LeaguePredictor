@@ -28,7 +28,8 @@ if __name__ == "__main__":
     for j in range(3):
         with open(data_dir / f"faker_norms_data_{j}.json") as json_file:
             data = json.load(json_file)
-        model.format_json(data)
+        model.format_json(data) # Add the data to the model
+        del data
 
     storage_path = Path(__file__).parent / "data" / "processed" / "aggregated_games"
     ParquetRW.write_data(model.df, storage_path)

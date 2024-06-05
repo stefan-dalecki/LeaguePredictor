@@ -4,6 +4,9 @@ import os
 
 from dotenv import load_dotenv
 from enum import Enum
+from pathlib import Path
+
+#TODO: There should be a wrapper function for exponential wait (with cutoff) for these API calls
 
 load_dotenv()
 API_KEY = os.getenv("RIOT_API_KEY")
@@ -129,10 +132,17 @@ def get_game_history(
 
 # TODO: This code doesn't have a way of systematically retrieving different data. right now if we ran get_game_history it would grab 20 games and forever grab the same games. We need a way to systematically grab other data for the same players
 if __name__ == "__main__":
-    get_game_history(
-        "Faker",
-        filename=r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw\faker_norms_data_1.json",
-        type=Type.normal,
-        start=100,
-        count=100,
-    )
+    import time
+    DIR = Path(r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw")
+    for i in range(20):
+        get_game_history(
+            "is this a ward",
+            country=Country.north_america,
+            region=Region.americas,
+            filename=DIR/f"personal_norms_data_{2+i}.json",
+            type=Type.normal,
+            start=200+i*100,
+            count=100,
+        )
+        import time
+        time.sleep(10) 
