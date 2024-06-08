@@ -2,10 +2,10 @@
 
 ## Description
 
-This project aims to predict the victor of a game of [Leage of Legends]() based on incomplete information. The core of the project to be able to train a learning/classification model on historical game data such that it is able to predict a winner from incomplete information. 
+This project aims to predict the victor of a game of [Leage of Legends]() based on incomplete information. The core of the project to be able to train a learning/classification model on historical game data such that it is able to predict a winner from incomplete information.
 
 
-Currently the model pulls data from [Riot's API]() and aggregates it into a series of snapshots that are used, along with the final winner of each game, to train a neural network classification model that attempts to 'learn' what makes a winning situation vs a losing situation. The end goal of the model would be to use realtime data to predict the winner of an ongoing game. This could, hypothetically, take into account team/player history, champion picks, team postitioning, and current game status. 
+Currently the model pulls data from [Riot's API]() and aggregates it into a series of snapshots that are used, along with the final winner of each game, to train a neural network classification model that attempts to 'learn' what makes a winning situation vs a losing situation. The end goal of the model would be to use realtime data to predict the winner of an ongoing game. This could, hypothetically, take into account team/player history, champion picks, team postitioning, and current game status.
 
 ## Getting Started
 
@@ -72,21 +72,20 @@ Once you have your API key stored in your `.env` file, call:
 python main.py
 ```
 
-This will run the main script which will gather, train, and evaluate the model. The package will gather 60 games of data from Faker (one of League of Legend's premier players), store the data in a local directory named `data`, process and aggregate that raw `json` data into parquet files, train a model on this historical data, then finally evaluate how the model performed on an unused portion of the downloaded data. 
+This will run the main script which will gather, train, and evaluate the model. The package will gather 60 games of data from Faker (one of League of Legend's premier players), store the data in a local directory named `data`, process and aggregate that raw `json` data into parquet files, train a model on this historical data, then finally evaluate how the model performed on an unused portion of the downloaded data.
 
 
 ## Contributing to the project
 
-This project is open source and contributions are welcome to any areas of the code. There are ongoing discussions around the priority of different tasks located in the LEP.md. Feel free to contriubute with suggestions or commentary on future work within the project. 
+This project is open source and contributions are welcome to any areas of the code. There are ongoing discussions around the priority of different tasks located in the LEP.md. Feel free to contriubute with suggestions or commentary on future work within the project.
 
 ### Following formatting
 
-This project uses linting and formatting software including [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) to standardize the codebase. To ensure your code follows the same formatting used throughout the codebase you can simply call: 
+This project uses linting and formatting software including [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) to standardize the codebase. To ensure your code follows the same formatting used throughout the codebase you can simply call:
 
 ```bash
 pip install pre-commit
 pre-commit install
 ```
 
-This will install and setup pre-commit to run automatically on commit. 
-
+This will install and setup pre-commit to run automatically on commit.

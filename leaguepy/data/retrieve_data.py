@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from enum import Enum
 from pathlib import Path
 
-#TODO: There should be a wrapper function for exponential wait (with cutoff) for these API calls
+# TODO: There should be a wrapper function for exponential wait (with cutoff) for these API calls
 
 load_dotenv()
 API_KEY = os.getenv("RIOT_API_KEY")
@@ -77,9 +77,7 @@ def get_match_history(
 ) -> list:
     URL = URLS["match_hist"]
     response = requests.get(
-        URL.format(
-            region=region.value, puuid=puuid, type=type.value, start=start, count=count
-        ),
+        URL.format(region=region.value, puuid=puuid, type=type.value, start=start, count=count),
         params=RIOT_PARAMS,
     )
     # TODO: this should be a log not a print
@@ -88,13 +86,9 @@ def get_match_history(
     return response.json()
 
 
-def get_timeline(
-    match_id: str, region: Region = Region.asia, filename: str = None
-) -> dict:
+def get_timeline(match_id: str, region: Region = Region.asia, filename: str = None) -> dict:
     URL = URLS["timeline"]
-    response = requests.get(
-        URL.format(region=region.value, match_id=match_id), params=RIOT_PARAMS
-    )
+    response = requests.get(URL.format(region=region.value, match_id=match_id), params=RIOT_PARAMS)
     # TODO: this should be a log not a print
     print(f"timeline: {response.status_code}")
     write_if_not_none(response.json(), filename)
@@ -133,16 +127,20 @@ def get_game_history(
 # TODO: This code doesn't have a way of systematically retrieving different data. right now if we ran get_game_history it would grab 20 games and forever grab the same games. We need a way to systematically grab other data for the same players
 if __name__ == "__main__":
     import time
-    DIR = Path(r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw")
+
+    DIR = Path(
+        r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw"
+    )
     for i in range(20):
         get_game_history(
             "is this a ward",
             country=Country.north_america,
             region=Region.americas,
-            filename=DIR/f"personal_norms_data_{2+i}.json",
+            filename=DIR / f"personal_norms_data_{2+i}.json",
             type=Type.normal,
-            start=200+i*100,
+            start=200 + i * 100,
             count=100,
         )
         import time
-        time.sleep(10) 
+
+        time.sleep(10)

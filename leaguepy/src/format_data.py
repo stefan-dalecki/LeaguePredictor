@@ -374,9 +374,7 @@ class TeamAggregator(DataAggregator):
         self.df = pd.DataFrame(
             columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
         )
-        self.outcomes = pd.DataFrame(
-            columns=["outcome"], index=TeamAggregator.multi_index
-        )
+        self.outcomes = pd.DataFrame(columns=["outcome"], index=TeamAggregator.multi_index)
         super().__init__()
 
     @property
@@ -385,9 +383,7 @@ class TeamAggregator(DataAggregator):
         pass
 
     @staticmethod
-    def add_frame(
-        df: pd.DataFrame, idx: tuple[str, str], frame: list[dict]
-    ) -> pd.DataFrame:
+    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: list[dict]) -> pd.DataFrame:
         # TODO: This doesn't actually need to know about the dataframe. It should just return an ordered series that we add to the df in the add_game function
         events = frame["events"] or []
         player_frames = frame["participantFrames"] or dict()
@@ -397,9 +393,7 @@ class TeamAggregator(DataAggregator):
         # Add data from player snapshots
         for player in player_frames.values():
             team = _ID_TEAM_MAP[player["participantId"]]
-            df.loc[idx, f"cs_{team}"] += (
-                player["jungleMinionsKilled"] + player["minionsKilled"]
-            )
+            df.loc[idx, f"cs_{team}"] += player["jungleMinionsKilled"] + player["minionsKilled"]
             df.loc[idx, f"gold_{team}"] += player["totalGold"]
             # TODO: XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
             # Would maybe be easier to do with just lv difference, but at a minute scale it would be hard
@@ -411,11 +405,7 @@ class TeamAggregator(DataAggregator):
             if event_type not in TeamAggregator.event_map:
                 continue
             try:
-                team = (
-                    event["teamId"]
-                    if "teamId" in event
-                    else _ID_TEAM_MAP[event["killerId"]]
-                )
+                team = event["teamId"] if "teamId" in event else _ID_TEAM_MAP[event["killerId"]]
             except KeyError:
                 # Event not affiliated with a team. Skip to next
                 continue
@@ -434,9 +424,7 @@ class TeamAggregator(DataAggregator):
                 # assert killed_team != team
 
                 df.loc[idx, f"kills_{team}"] += 1
-                df.loc[idx, f"assists_{team}"] += len(
-                    event.get("assistingParticipantIds", [])
-                )
+                df.loc[idx, f"assists_{team}"] += len(event.get("assistingParticipantIds", []))
                 df.loc[idx, f"deaths_{killed_team}"] += 1
 
     @staticmethod
@@ -453,14 +441,14 @@ class TeamAggregator(DataAggregator):
         winner = get_winner(game)
         second_half_frames = frames[int(len(frames) / 2) :]
         for frame in second_half_frames:
-            # Normalize the timestamp here since it is also the index and would be difficult to 
+            # Normalize the timestamp here since it is also the index and would be difficult to
             # modify later
             idx = (game_id, frame["timestamp"] / (60 * 1000 * 30))
             TeamAggregator.add_frame(game_df, idx, frame)
             outcomes.loc[idx, "outcome"] = winner / 100 - 1
-        game_df.loc[:, TeamAggregator.cum_columns] = game_df.loc[
-            :, TeamAggregator.cum_columns
-        ].agg(np.cumsum)
+        game_df.loc[:, TeamAggregator.cum_columns] = game_df.loc[:, TeamAggregator.cum_columns].agg(
+            np.cumsum
+        )
         return game_df, outcomes
 
     def format_json(self, raw_data: dict[str, dict]) -> pd.DataFrame:
@@ -472,7 +460,7 @@ class TeamAggregator(DataAggregator):
                 continue
             self.df = pd.concat([self.df, game_df])
             self.outcomes = pd.concat([self.outcomes, outcome_df])
-        self.normalize() # TODO: this normalizes the whole dataframe everytime when it shouldn't
+        self.normalize()  # TODO: this normalizes the whole dataframe everytime when it shouldn't
         # TODO: Explore how aggregation of the results changes the outcomes
 
     def normalize(self):
@@ -480,9 +468,7 @@ class TeamAggregator(DataAggregator):
             [param["norm_val"] for param in TeamAggregator.standard_values.values()], 2
         )
         data = dict(zip(TeamAggregator.team_columns, vals))
-        normalizer = pd.DataFrame(
-            data, index=self.df.index, columns=TeamAggregator.team_columns
-        )
+        normalizer = pd.DataFrame(data, index=self.df.index, columns=TeamAggregator.team_columns)
 
         # Assume we can get the data into a pandas dataframe with the same columsn
 

@@ -5,23 +5,15 @@ repos:
     rev: v3.2.0
     hooks:
     -   id: trailing-whitespace
-        stages: [commit]
+        stages: [push]
     -   id: end-of-file-fixer
-        stages: [commit]
+        stages: [push]
     -   id: check-yaml
-        stages: [commit]
+        stages: [push]
     -   id: check-added-large-files
-        stages: [commit]
+        stages: [push]
 -   repo: https://github.com/psf/black
     rev: 22.10.0
     hooks:
     -   id: black
-        stages: [commit]
--   repo: local
-    hooks:
-    -   id: pytest-check
-        name: pytest-check
-        entry: pytest
-        language: system
-        pass_filenames: false
-        always_run: true
+        stages: [push]
