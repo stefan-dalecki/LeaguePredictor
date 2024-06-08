@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "LeaguePy"
+version = "0.1.0"
+description = "A Python package for predicting the outcomes of League of Legends games."
+authors = [
+    { name="Jonathan Huster", email="" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["league", "legends", "python"]
+dependencies = [
+    'numpy>1',
+    'pandas>2',
+    'pyarrow',
+    'python-dotenv',
+    'requests',
+    'scikit-learn',
+]
+
+
+[project.optional-dependencies]
+dev = ["pytest", "flake8", "black", "ruff"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.flake8]
+max-line-length = 100
+
+[tool.black]
+line-length = 100

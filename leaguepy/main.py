@@ -5,9 +5,9 @@ from abc import ABC
 
 from pathlib import Path
 
-from src.format_data import DummyData, TeamAggregator
-from src.reader_writer import ParquetRW
-from src.train_model import TrainerEvaluator
+from leaguepy.src.format_data import DummyData, TeamAggregator
+from leaguepy.src.reader_writer import ParquetRW
+from leaguepy.src.train_model import TrainerEvaluator
 
 
 if __name__ == "__main__":
