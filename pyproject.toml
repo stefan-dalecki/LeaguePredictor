@@ -15,6 +15,7 @@ keywords = ["league", "legends", "python"]
 dependencies = [
     'numpy>1',
     'pandas>2',
+    'pip-tools',
     'pyarrow',
     'python-dotenv',
     'requests',

@@ -15,11 +15,9 @@ the user's interest and the priority of the task as to which tasks get done, whe
 ### Formatting/Code Style
 The initial author of this module is relatively junior and so is using this as a learning opportunity. With that in mind, there are several areas of improvement that can be made to the code structure and quality. Some initial changes that should be implemented (in no particular order) are:
 * Turning this module into a package and making it availabel on [pypi](https://pypi.org/)
-    * The use of a pyproject.toml file to list and generate requirements
-* Establishing pre-commit hooks and formatting guidelines for the repository
-* Establishing a **README.md** file to assist in setting up and using the repository
 * The use of logs instead of print statements in the codebase
 * General formatting and readability improvements
+* Adding testing to run with nox on each push
 
 ### Model improvement
 * Expand data volume to improve model prediction quality
