@@ -52,7 +52,8 @@ This project uses a `pyproject.toml` file to specify its dependencies. You can i
 
 2. **Install the requirements:**
     ```bash
-    pip install .
+    pip install -r requirements-dev.txt
+    pip install -e .
     ```
 
     This command will install the dependencies specified in the `pyproject.toml` file located in the root of the repository.
@@ -72,4 +73,20 @@ python main.py
 ```
 
 This will run the main script which will gather, train, and evaluate the model. The package will gather 60 games of data from Faker (one of League of Legend's premier players), store the data in a local directory named `data`, process and aggregate that raw `json` data into parquet files, train a model on this historical data, then finally evaluate how the model performed on an unused portion of the downloaded data. 
+
+
+## Contributing to the project
+
+This project is open source and contributions are welcome to any areas of the code. There are ongoing discussions around the priority of different tasks located in the LEP.md. Feel free to contriubute with suggestions or commentary on future work within the project. 
+
+### Following formatting
+
+This project uses linting and formatting software including [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) to standardize the codebase. To ensure your code follows the same formatting used throughout the codebase you can simply call: 
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+This will install and setup pre-commit to run automatically on commit. 
 
