@@ -1,147 +1,18 @@
 import json
+import logging
+import logging.config
 import pandas as pd
 import numpy as np
-
-import pandas as pd
 from abc import ABC
 
 from pathlib import Path
 
+from leaguepy.src.constants import DEFAULT_LOGGER_CONFIG, TeamNumbers, PLAYER_TEAM_MAP
+
 # We'll want to consider several things eventually, cs, gold/gold per min, objectives, KDA (by member), etc. . However, these data aren't logged cumulatively, so we'll need to pull these out
 
-_TEAMS = np.array([100, 200])
-
-_ID_TEAM_MAP = dict(zip(range(1, 11), np.repeat(_TEAMS, 5)))
-
-# _EVENT_MAP = {
-#     "BUILDING_KILL": {
-#         "TOWER_BUILDING": "tower",
-#         "INHIBITOR_BUILDING": "inhibitor",
-#     },
-#     "ELITE_MONSTER_KILL": {
-#         "DRAGON": "dragon",
-#         "RIFTHERALD": "riftherald",
-#         "BARON_NASHOR": "baron",
-#         "ELDER_DRAGON": "elder",
-#     },
-#     "CHAMPION_KILL": {
-#         "killerId": "kills",
-#         "assistingParticipantIds": "assists",
-#         "victimId": "deaths",
-#     },
-# }
-
-# DECISION_COLS = [
-#     "cs",
-#     "gold",
-#     "tower",
-#     "inhibitor",
-#     "dragon",
-#     "riftherald",
-#     "baron",
-#     "elder",
-#     "kills",
-#     "assists",
-#     "deaths",
-# ]
-
-
-# def get_dict_vals(dic, vals=[], rec=True):
-#     for val in dic.values():
-#         if type(val) == dict:
-#             get_dict_vals(val, vals)
-#         else:
-#             vals.append(val)
-#     return vals
-
-
-# _PLAYER_COLS = ["cs", "gold"]
-# _TEAM_COLS = get_dict_vals(_EVENT_MAP)
-
-
-# def make_ts_df(data: dict):
-#     try:
-#         frames = data["info"]["frames"]
-#     except KeyError:
-#         return pd.DataFrame()
-
-#     # Make DF with index for frame and team
-
-#     ind = pd.MultiIndex.from_product(
-#         [range(len(frames)), _TEAMS], names=["frame", "team"]
-#     )
-#     ts_data = pd.DataFrame(0, index=ind, columns=_PLAYER_COLS + _TEAM_COLS)
-#     for i, frame in enumerate(frames):
-#         events = frame["events"]
-#         players = frame["participantFrames"]
-
-#         # Gather and aggregate player level data
-#         # XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
-#         for player in players:
-#             ts_data.loc[i].loc[
-#                 _ID_TEAM_MAP[players[player]["participantId"]], _PLAYER_COLS
-#             ] += [
-#                 players[player]["jungleMinionsKilled"]
-#                 + players[player]["minionsKilled"],
-#                 players[player]["totalGold"]/(3000*5),#Roughly the cost of one completed item
-#             ]
-
-#         # Gather team/event level data
-#         for event in events:
-#             event_type = event["type"]
-#             if event_type in TeamAggregator.event_map:
-#                 try:
-#                     team = (
-#                         event["teamId"]
-#                         if "teamId" in event
-#                         else _ID_TEAM_MAP[event["killerId"]]
-#                     )
-#                 except KeyError:
-#                     # TODO: make this a logger
-#                     # print("No matching team found. Skipping")
-#                     continue
-#                 if event_type == "CHAMPION_KILL":
-#                     killed_team = _ID_TEAM_MAP[event["victimId"]]
-#                     if killed_team == team:
-#                         print("what the")
-
-#                     # assert killed_team != team
-
-#                     pos_metrics = ["killerId", "assistingParticipantIds"]
-#                     neg_metrics = ["victimId"]
-#                     ts_data.loc[i].loc[
-#                         team, [_EVENT_MAP[event_type][metric] for metric in pos_metrics]
-#                     ] += [
-#                         1,
-#                         len(event.get(pos_metrics[1], [])),
-#                     ]
-#                     ts_data.loc[i].loc[
-#                         killed_team,
-#                         [_EVENT_MAP[event_type][metric] for metric in neg_metrics],
-#                     ] += [1]
-#                 elif event_type == "ELITE_MONSTER_KILL":
-#                     ts_data.loc[i].loc[
-#                         team, _EVENT_MAP[event_type][event["monsterType"]]
-#                     ] += 1
-#                 elif event_type == "BUILDING_KILL":
-#                     ts_data.loc[i].loc[
-#                         team,
-#                         TeamAggregator.event_map[event_type][event["buildingType"]],
-#                     ] += 1
-
-#                 # TODO: assert that team kills lte opposite teams deaths
-#     return ts_data
-
-
-# def get_winner(data: dict):
-#     try:
-#         frames = data["info"]["frames"]
-#         events = frames[-1]["events"]
-#         for event in events:
-#             if "winningTeam" in event:
-#                 return event.get("winningTeam")
-#     except KeyError:
-#         return 0
+logging.config.dictConfig(DEFAULT_LOGGER_CONFIG)
+logger = logging.getLogger(__name__)
 
 
 def get_winner(game: dict[str, dict]) -> int:
@@ -152,90 +23,6 @@ def get_winner(game: dict[str, dict]) -> int:
     :return: either 100 or 200 to indicate the winning team
     """
     return game["info"]["frames"][-1]["events"][-1]["winningTeam"]
-
-
-# def make_cumulative(df: pd.DataFrame, group_cols: List[str], val_cols: List[str]):
-#     try:
-#         output = df.copy()
-#         holder = df.groupby(group_cols)
-#         for col in val_cols:
-#             if col in df.columns:
-#                 output[col] = holder[col].cumsum()
-#         return output
-#     except KeyError:
-#         return pd.DataFrame()
-
-
-# # TODO: Add format option (default pqt) for the output files
-# def write_games(data: dict, out_dir: str) -> None:
-#     """Wite out the cumulative timeseries data by game into out_dir
-
-#     Args:
-#         data (dict): A dictionary of timeseries data gathered from RIOT's Timeseries data API
-#         out_dir (str): Path to the location to write the outputs (outputs written by game id)
-#     """
-#     winner_data = dict()
-
-#     for i, round in enumerate(data):
-#         matchId = data[round]["metadata"]["matchId"]
-#         try:
-#             df = make_ts_df(data[round])
-#             test = make_cumulative(df, group_cols="team", val_cols=_TEAM_COLS)
-#             test.reset_index().to_parquet(Path(out_dir) / f"{matchId}.parquet")
-
-#             winner_data[matchId] = get_winner(data[round])
-#         # TODO: Make print into logger
-#         # TODO make except a non broad except and return it
-#         except:
-#             print("file failed")
-#         if i % 5 == 0:
-#             print(f"On {i}/{len(data)}")
-#     pd.DataFrame.from_dict(winner_data, orient="index").rename(
-#         columns={0: "winner"}
-#     ).to_parquet(Path(out_dir) / "win_log.parquet")
-
-
-# # TODO: Make function that reads in each game data, makes an array of 1xMetrics (one for each team) for each frame of the differences between teams on each metric
-# # and makes a corresponding array of 1xMetrics for which team won
-# # TODO: figure out what parameters would allow the model to have harder classifications at the begining and end (eg more sure 50/50 at start and more sure 100/0 at end)
-
-
-# # TODO: make a function that calls the above for all matches in matches history folder, and appends it to have an array
-# # of arrays. length of matches*frames of arrays of length Metrics. Should output an X and y dataset to train on
-
-
-# def format_snapshots(data: pd.DataFrame) -> np.ndarray:
-#     """
-#     Return a numpy array where the first n/2 columns come from team one's data the second half comes from
-#     team 2's data and each row is a snapshot of the game at a particular time
-
-#     :param data: _description_
-#     :return: _description_
-#     """
-#     rows = data.shape[0]
-#     cols = data.shape[1]
-
-#     assert rows % 2 == 0
-
-#     frames = data.values.reshape((rows // 2, cols * 2))
-
-#     return frames
-
-
-# def make_outcome_data(
-#     matches: List[str], dir: Path = Path(".")
-# ) -> Tuple[np.ndarray, np.ndarray]:
-#     win_log = pd.read_parquet(dir / "win_log.pqt")
-#     outcomes = np.zeros(len(matches))
-#     final_snapshots = np.zeros((len(matches), len(DECISION_COLS) * 2))
-
-#     for i, match in enumerate(matches):
-#         game_data = pd.read_parquet(match, columns=DECISION_COLS)
-#         frames = format_snapshots(game_data)
-#         final_snapshots[i] = frames[-1]
-#         outcomes[i] = win_log.loc[match.stem] == 100
-
-#     return final_snapshots, outcomes
 
 
 class DataAggregator(ABC):
@@ -265,18 +52,18 @@ class TeamAggregator(DataAggregator):
     # duplicate rows for naming
     index = ["game_id", "timestamp"]
     standard_values = {
-        "cs": {
-            "norm_val": 10 * 30 * 5,  # Could instead normalize to CS per minute
+        "cs": { # Could instead normalize to CS per minute
+            "norm_val": 10 * 30 * 5, # 10 CS per minute * 30 minute games * 5 team members
             "pre_agg": True,
             "event_map": None,
         },
         "gold": {
-            "norm_val": 3000 * 5,  # Average cost per item
+            "norm_val": 3000 * 5,  # Average cost per item * team members
             "pre_agg": True,
             "event_map": None,
         },
         "tower": {
-            "norm_val": 8,
+            "norm_val": 8, # 11 towers in total, but not all need to be taken
             "pre_agg": False,
             "event_map": {
                 "event_type": "BUILDING_KILL",
@@ -284,7 +71,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "inhibitor": {
-            "norm_val": 3,
+            "norm_val": 3, # 3 Inhibitors in total 
             "pre_agg": False,
             "event_map": {
                 "event_type": "BUILDING_KILL",
@@ -292,7 +79,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "dragon": {
-            "norm_val": 4,
+            "norm_val": 4, # At 4 dragons a team gets soul, which is normal
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -300,7 +87,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "riftherald": {
-            "norm_val": 1,
+            "norm_val": 1, # There's only one rift now
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -308,7 +95,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "baron": {
-            "norm_val": 1,
+            "norm_val": 1, # Usually only one to two barons are taken
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -316,7 +103,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "elder": {
-            "norm_val": 1,
+            "norm_val": 1, # Usually only one elder dragon is taken
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -350,11 +137,11 @@ class TeamAggregator(DataAggregator):
     }
 
     columns = list(standard_values.keys())
-    team_columns = [f"{col}_{team}" for col in standard_values for team in _TEAMS]
+    team_columns = [f"{col}_{team}" for col in standard_values for team in TeamNumbers]
     cum_columns = [
         f"{col}_{team}"
         for col, params in standard_values.items()
-        for team in _TEAMS
+        for team in TeamNumbers
         if not params["pre_agg"]
     ]
     multi_index = pd.MultiIndex.from_tuples([], names=index)
@@ -383,16 +170,16 @@ class TeamAggregator(DataAggregator):
         pass
 
     @staticmethod
-    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: list[dict]) -> pd.DataFrame:
+    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: dict) -> pd.DataFrame:
         # TODO: This doesn't actually need to know about the dataframe. It should just return an ordered series that we add to the df in the add_game function
-        events = frame["events"] or []
-        player_frames = frame["participantFrames"] or dict()
+        events = frame.get("events", [])
+        player_frames = frame.get("participantFrames", {})
 
         df.loc[idx, :] = 0
 
         # Add data from player snapshots
         for player in player_frames.values():
-            team = _ID_TEAM_MAP[player["participantId"]]
+            team = PLAYER_TEAM_MAP[player["participantId"]]
             df.loc[idx, f"cs_{team}"] += player["jungleMinionsKilled"] + player["minionsKilled"]
             df.loc[idx, f"gold_{team}"] += player["totalGold"]
             # TODO: XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
@@ -405,7 +192,7 @@ class TeamAggregator(DataAggregator):
             if event_type not in TeamAggregator.event_map:
                 continue
             try:
-                team = event["teamId"] if "teamId" in event else _ID_TEAM_MAP[event["killerId"]]
+                team = event["teamId"] if "teamId" in event else PLAYER_TEAM_MAP[event["killerId"]]
             except KeyError:
                 # Event not affiliated with a team. Skip to next
                 continue
@@ -418,9 +205,9 @@ class TeamAggregator(DataAggregator):
                 monster = TeamAggregator.event_map[event_type][event["buildingType"]]
                 df.loc[idx, f"{monster}_{team}"] += 1
             if event_type == "CHAMPION_KILL":
-                killed_team = _ID_TEAM_MAP[event["victimId"]]
+                killed_team = PLAYER_TEAM_MAP[event["victimId"]]
                 if killed_team == team:
-                    print("what the")
+                    logger.warning("Data found where one team member killed another team member. If Renatta Glasc is not involved, I don't know what happened")
                 # assert killed_team != team
 
                 df.loc[idx, f"kills_{team}"] += 1
@@ -460,7 +247,6 @@ class TeamAggregator(DataAggregator):
                 continue
             self.df = pd.concat([self.df, game_df])
             self.outcomes = pd.concat([self.outcomes, outcome_df])
-        self.normalize()  # TODO: this normalizes the whole dataframe everytime when it shouldn't
         # TODO: Explore how aggregation of the results changes the outcomes
 
     def normalize(self):
@@ -506,4 +292,3 @@ if __name__ == "__main__":
         model.normalize()
         # write_games(data, out_dir=DIR.parent / "matches")
 
-    print("all done")

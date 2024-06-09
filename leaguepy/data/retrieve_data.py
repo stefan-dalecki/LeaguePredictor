@@ -1,54 +1,15 @@
+import logging
+import logging.config
 import requests
 import json
-import os
-
-from dotenv import load_dotenv
-from enum import Enum
 from pathlib import Path
+
+from leaguepy.src.constants import Region, Country, MatchType, URLS, RIOT_PARAMS
 
 # TODO: There should be a wrapper function for exponential wait (with cutoff) for these API calls
 
-load_dotenv()
-API_KEY = os.getenv("RIOT_API_KEY")
-# To generate a key go to this web address, make an account, and regenerate a developement api key
-# https://developer.riotgames.com/
-
-RIOT_PARAMS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
-    "Origin": "https://developer.riotgames.com",
-    "X-Riot-Token": f"{API_KEY}",
-    "api_key": f"{API_KEY}",
-}
-
-
-class Region(Enum):
-    americas = "americas"
-    asia = "asia"
-    europe = "europe"
-    sea = "sea"
-
-
-class Country(Enum):
-    korea = "kr"
-    europe_north = "EUN1"
-    europe_west = "EUW1"
-    japan = "JP1"
-    north_america = "NA1"
-
-
-class Type(Enum):
-    normal = "normal"
-    ranked = "ranked"
-
-
-URLS = {
-    "puuid": "https://{country}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{username}",
-    "match_hist": "https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type={type}&start={start}&count={count}",
-    "timeline": "https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline",
-}
-
+logging.config.dictConfig(DEFAULT_LOGGER_CONFIG)
+logger = logging.getLogger(__name__)
 
 def write_if_not_none(data, filename: str = None) -> None:
     if filename is not None:
@@ -56,21 +17,20 @@ def write_if_not_none(data, filename: str = None) -> None:
             json.dump(data, outfile)
 
 
-def get_puuid(username: str, country: Country = Country.korea, filename: str = None):
+def get_puuid(username: str, country: Country = Country.KOREA, filename: str = None):
     URL = URLS["puuid"]
     response = requests.get(
         URL.format(country=country.value, username=username), params=RIOT_PARAMS
     )
-    # TODO: this should be a log not a print
-    print(response.status_code)
+    logger.info(f"PUUID Retrieval Status Code: {response.status_code}")
     write_if_not_none(response.json(), filename)
     return response.json()["puuid"]
 
 
 def get_match_history(
     puuid: str,
-    region: Region = Region.asia,
-    type: Type = Type.normal,
+    region: Region = Region.ASIA,
+    type: MatchType = MatchType.NORMAL,
     start: int = 0,
     count: int = 20,
     filename: str = None,
@@ -80,25 +40,23 @@ def get_match_history(
         URL.format(region=region.value, puuid=puuid, type=type.value, start=start, count=count),
         params=RIOT_PARAMS,
     )
-    # TODO: this should be a log not a print
-    print(response.status_code)
+    logger.info(f"Match History Retrieval Status Code: {response.status_code}")
     write_if_not_none(response.json(), filename)
     return response.json()
 
 
-def get_timeline(match_id: str, region: Region = Region.asia, filename: str = None) -> dict:
+def get_timeline(match_id: str, region: Region = Region.ASIA, filename: str = None) -> dict:
     URL = URLS["timeline"]
     response = requests.get(URL.format(region=region.value, match_id=match_id), params=RIOT_PARAMS)
-    # TODO: this should be a log not a print
-    print(f"timeline: {response.status_code}")
+    logger.info(f"Timeline Retrieval Status Code: {response.status_code}")
     write_if_not_none(response.json(), filename)
     return response.json()
 
 
 def get_game_history(
     username: str,
-    country: Country = Country.korea,
-    region: Region = Region.asia,
+    country: Country = Country.KOREA,
+    region: Region = Region.ASIA,
     filename: str = None,
     **args,
 ) -> json:
@@ -134,10 +92,10 @@ if __name__ == "__main__":
     for i in range(20):
         get_game_history(
             "is this a ward",
-            country=Country.north_america,
-            region=Region.americas,
+            country=Country.NORTH_AMERICA,
+            region=Region.AMERICAS,
             filename=DIR / f"personal_norms_data_{2+i}.json",
-            type=Type.normal,
+            type=MatchType.NORMAL,
             start=200 + i * 100,
             count=100,
         )
