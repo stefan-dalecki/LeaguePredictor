@@ -172,8 +172,8 @@ class TeamAggregator(DataAggregator):
     @staticmethod
     def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: dict) -> pd.DataFrame:
         # TODO: This doesn't actually need to know about the dataframe. It should just return an ordered series that we add to the df in the add_game function
-        events = frame.get("events", [])
-        player_frames = frame.get("participantFrames", {})
+        events = frame.get("events") or []
+        player_frames = frame.get("participantFrames") or {}
 
         df.loc[idx, :] = 0
 
