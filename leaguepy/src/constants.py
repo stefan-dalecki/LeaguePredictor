@@ -91,7 +91,7 @@ class TeamNumbers(IntEnum):
     TEAM1 = 100
     TEAM2 = 200
     
-PLAYER_TEAM_MAP = dict(zip(PLAYERS, np.repeat(TeamNumbers, 5)))
+PLAYER_TEAM_MAP = dict(zip(PLAYERS, np.repeat(list(TeamNumbers), 5)))
 
 
 

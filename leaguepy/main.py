@@ -1,11 +1,7 @@
 import json
-import numpy as np
-import pandas as pd
-from abc import ABC
-
 from pathlib import Path
 
-from leaguepy.src.format_data import DummyData, TeamAggregator
+from leaguepy.src.format_data import TeamAggregator
 from leaguepy.src.reader_writer import ParquetRW
 from leaguepy.src.train_model import TrainerEvaluator
 
@@ -26,7 +22,7 @@ if __name__ == "__main__":
     model = TeamAggregator()
     data_dir = Path(__file__).parent / "data" / "raw"
     for j in range(3):
-        with open(data_dir / f"faker_norms_data_{j}.json") as json_file:
+        with open(data_dir / f"faker_norms_data_{j}.json", encoding="utf8") as json_file:
             data = json.load(json_file)
         model.format_json(data)  # Add the data to the model
         del data

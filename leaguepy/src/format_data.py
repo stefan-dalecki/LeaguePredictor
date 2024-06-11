@@ -4,6 +4,7 @@ import logging.config
 import pandas as pd
 import numpy as np
 from abc import ABC
+from abc import abstractmethod
 
 from pathlib import Path
 
@@ -26,6 +27,7 @@ def get_winner(game: dict[str, dict]) -> int:
 
 
 class DataAggregator(ABC):
+    @abstractmethod
     def format_json(raw_data: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
         pass
 
@@ -41,7 +43,7 @@ class DummyData(DataAggregator):
         return df
 
     @staticmethod
-    def format_json(raw_data):
+    def format_json(raw_data: dict)->tuple[pd.DataFrame, np.ndarray]:
         data = DummyData.make_dummy_data()
         wins = np.random.choice(2, len(data))
         return data, wins
@@ -157,20 +159,17 @@ class TeamAggregator(DataAggregator):
         else:
             event_map[event_type] = {event_name: key}
 
+
     def __init__(self) -> None:
         self.df = pd.DataFrame(
             columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
         )
         self.outcomes = pd.DataFrame(columns=["outcome"], index=TeamAggregator.multi_index)
         super().__init__()
-
-    @property
-    @classmethod
-    def normal_df(cls):
-        pass
+        
 
     @staticmethod
-    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: dict) -> pd.DataFrame:
+    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: dict) -> None:# pd.DataFrame:
         # TODO: This doesn't actually need to know about the dataframe. It should just return an ordered series that we add to the df in the add_game function
         events = frame.get("events") or []
         player_frames = frame.get("participantFrames") or {}
@@ -238,7 +237,7 @@ class TeamAggregator(DataAggregator):
         )
         return game_df, outcomes
 
-    def format_json(self, raw_data: dict[str, dict]) -> pd.DataFrame:
+    def format_json(self, raw_data: dict[str, dict]) -> None:
         for game in raw_data.values():
             try:
                 game_df, outcome_df = self.format_game(game)
