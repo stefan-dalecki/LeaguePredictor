@@ -4,16 +4,24 @@ import requests
 import json
 from pathlib import Path
 
-from leaguepy.src.constants import Region, Country, MatchType, URLS, RIOT_PARAMS, DEFAULT_LOGGER_CONFIG
+from leaguepy.src.constants import (
+    Region,
+    Country,
+    MatchType,
+    URLS,
+    RIOT_PARAMS,
+    DEFAULT_LOGGER_CONFIG,
+)
 
 # TODO: There should be a wrapper function for exponential wait (with cutoff) for these API calls
 
 logging.config.dictConfig(DEFAULT_LOGGER_CONFIG)
 logger = logging.getLogger(__name__)
 
+
 def write_if_not_none(data, filename: Path | None = None) -> None:
     if data is not None:
-        with open(filename, "w", encoding='utf8') as outfile:
+        with open(filename, "w", encoding="utf8") as outfile:
             json.dump(data, outfile)
 
 

@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 
@@ -11,28 +10,28 @@ from enum import Enum, IntEnum
 now = datetime.now()
 # Define the logging configuration dictionary
 DEFAULT_LOGGER_CONFIG = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'default': {
-            'format': '%(name)s - %(asctime)s - %(levelname)s - %(message)s',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(name)s - %(asctime)s - %(levelname)s - %(message)s",
         },
     },
-    'handlers': {
-        'file_handler': {
-            'class': 'logging.FileHandler',
-            'filename': f'LeaguePy_{now.strftime("%Y-%m-%d-%H-%M-%S")}.log',
-            'encoding': 'utf8',
-            'formatter': 'default',
+    "handlers": {
+        "file_handler": {
+            "class": "logging.FileHandler",
+            "filename": f'LeaguePy_{now.strftime("%Y-%m-%d-%H-%M-%S")}.log',
+            "encoding": "utf8",
+            "formatter": "default",
         },
-        'stream_handler': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'default',
+        "stream_handler": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
         },
     },
-    'root': {
-        'handlers': ['file_handler', 'stream_handler'],
-        'level': 'DEBUG',
+    "root": {
+        "handlers": ["file_handler", "stream_handler"],
+        "level": "DEBUG",
     },
 }
 
@@ -81,18 +80,16 @@ URLS = {
 }
 
 
-
 # ===================DATA PROCESSING CONSTANTS====================
 
-NUMBER_PLAYERS = 10 
-PLAYERS = range(1, NUMBER_PLAYERS+1)
-GAME_DURATION = 30 * 60 * 1000 # 30 Minutes * Seconds/Min * Miliseconds/second
+NUMBER_PLAYERS = 10
+PLAYERS = range(1, NUMBER_PLAYERS + 1)
+GAME_DURATION = 30 * 60 * 1000  # 30 Minutes * Seconds/Min * Miliseconds/second
+
 
 class TeamNumbers(IntEnum):
     TEAM1 = 100
     TEAM2 = 200
-    
+
+
 PLAYER_TEAM_MAP = dict(zip(PLAYERS, np.repeat(list(TeamNumbers), 5)))
-
-
-

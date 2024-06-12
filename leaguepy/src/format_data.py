@@ -8,7 +8,12 @@ from abc import abstractmethod
 
 from pathlib import Path
 
-from leaguepy.src.constants import DEFAULT_LOGGER_CONFIG, TeamNumbers, PLAYER_TEAM_MAP, GAME_DURATION
+from leaguepy.src.constants import (
+    DEFAULT_LOGGER_CONFIG,
+    TeamNumbers,
+    PLAYER_TEAM_MAP,
+    GAME_DURATION,
+)
 
 # We'll want to consider several things eventually, cs, gold/gold per min, objectives, KDA (by member), etc. . However, these data aren't logged cumulatively, so we'll need to pull these out
 
@@ -43,7 +48,7 @@ class DummyData(DataAggregator):
         return df
 
     @staticmethod
-    def format_json(raw_data: dict)->tuple[pd.DataFrame, np.ndarray]:
+    def format_json(raw_data: dict) -> tuple[pd.DataFrame, np.ndarray]:
         data = DummyData.make_dummy_data()
         wins = np.random.choice(2, len(data))
         return data, wins
@@ -54,8 +59,8 @@ class TeamAggregator(DataAggregator):
     # duplicate rows for naming
     index = ["game_id", "timestamp"]
     standard_values = {
-        "cs": { # Could instead normalize to CS per minute
-            "norm_val": 10 * 30 * 5, # 10 CS per minute * 30 minute games * 5 team members
+        "cs": {  # Could instead normalize to CS per minute
+            "norm_val": 10 * 30 * 5,  # 10 CS per minute * 30 minute games * 5 team members
             "pre_agg": True,
             "event_map": None,
         },
@@ -65,7 +70,7 @@ class TeamAggregator(DataAggregator):
             "event_map": None,
         },
         "tower": {
-            "norm_val": 8, # 11 towers in total, but not all need to be taken
+            "norm_val": 8,  # 11 towers in total, but not all need to be taken
             "pre_agg": False,
             "event_map": {
                 "event_type": "BUILDING_KILL",
@@ -73,7 +78,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "inhibitor": {
-            "norm_val": 3, # 3 Inhibitors in total 
+            "norm_val": 3,  # 3 Inhibitors in total
             "pre_agg": False,
             "event_map": {
                 "event_type": "BUILDING_KILL",
@@ -81,7 +86,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "dragon": {
-            "norm_val": 4, # At 4 dragons a team gets soul, which is normal
+            "norm_val": 4,  # At 4 dragons a team gets soul, which is normal
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -89,7 +94,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "riftherald": {
-            "norm_val": 1, # There's only one rift now
+            "norm_val": 1,  # There's only one rift now
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -97,7 +102,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "baron": {
-            "norm_val": 1, # Usually only one to two barons are taken
+            "norm_val": 1,  # Usually only one to two barons are taken
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -105,7 +110,7 @@ class TeamAggregator(DataAggregator):
             },
         },
         "elder": {
-            "norm_val": 1, # Usually only one elder dragon is taken
+            "norm_val": 1,  # Usually only one elder dragon is taken
             "pre_agg": False,
             "event_map": {
                 "event_type": "ELITE_MONSTER_KILL",
@@ -159,17 +164,15 @@ class TeamAggregator(DataAggregator):
         else:
             event_map[event_type] = {event_name: key}
 
-
     def __init__(self) -> None:
         self.df = pd.DataFrame(
             columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
         )
         self.outcomes = pd.DataFrame(columns=["outcome"], index=TeamAggregator.multi_index)
         super().__init__()
-        
 
     @staticmethod
-    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: dict) -> None:# pd.DataFrame:
+    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: dict) -> None:  # pd.DataFrame:
         # TODO: This doesn't actually need to know about the dataframe. It should just return an ordered series that we add to the df in the add_game function
         events = frame.get("events") or []
         player_frames = frame.get("participantFrames") or {}
@@ -206,7 +209,9 @@ class TeamAggregator(DataAggregator):
             if event_type == "CHAMPION_KILL":
                 killed_team = PLAYER_TEAM_MAP[event["victimId"]]
                 if killed_team == team:
-                    logger.warning("Data found where one team member killed another team member. If Renatta Glasc is not involved, I don't know what happened")
+                    logger.warning(
+                        "Data found where one team member killed another team member. If Renatta Glasc is not involved, I don't know what happened"
+                    )
                 # assert killed_team != team
 
                 df.loc[idx, f"kills_{team}"] += 1
@@ -250,7 +255,8 @@ class TeamAggregator(DataAggregator):
 
     def normalize(self):
         vals = np.repeat(
-            [param["norm_val"] for param in TeamAggregator.standard_values.values()], len(TeamNumbers)
+            [param["norm_val"] for param in TeamAggregator.standard_values.values()],
+            len(TeamNumbers),
         )
         data = dict(zip(TeamAggregator.team_columns, vals))
         normalizer = pd.DataFrame(data, index=self.df.index, columns=TeamAggregator.team_columns)
@@ -290,4 +296,3 @@ if __name__ == "__main__":
         model.format_json(data)
         model.normalize()
         # write_games(data, out_dir=DIR.parent / "matches")
-
