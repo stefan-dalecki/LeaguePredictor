@@ -8,7 +8,7 @@ from abc import abstractmethod
 
 from pathlib import Path
 
-from leaguepy.src.constants import DEFAULT_LOGGER_CONFIG, TeamNumbers, PLAYER_TEAM_MAP
+from leaguepy.src.constants import DEFAULT_LOGGER_CONFIG, TeamNumbers, PLAYER_TEAM_MAP, GAME_DURATION
 
 # We'll want to consider several things eventually, cs, gold/gold per min, objectives, KDA (by member), etc. . However, these data aren't logged cumulatively, so we'll need to pull these out
 
@@ -229,9 +229,9 @@ class TeamAggregator(DataAggregator):
         for frame in second_half_frames:
             # Normalize the timestamp here since it is also the index and would be difficult to
             # modify later
-            idx = (game_id, frame["timestamp"] / (60 * 1000 * 30))
+            idx = (game_id, frame["timestamp"] / GAME_DURATION)
             TeamAggregator.add_frame(game_df, idx, frame)
-            outcomes.loc[idx, "outcome"] = winner / 100 - 1
+            outcomes.loc[idx, "outcome"] = winner / TeamNumbers.TEAM1 - 1
         game_df.loc[:, TeamAggregator.cum_columns] = game_df.loc[:, TeamAggregator.cum_columns].agg(
             np.cumsum
         )
@@ -250,7 +250,7 @@ class TeamAggregator(DataAggregator):
 
     def normalize(self):
         vals = np.repeat(
-            [param["norm_val"] for param in TeamAggregator.standard_values.values()], 2
+            [param["norm_val"] for param in TeamAggregator.standard_values.values()], len(TeamNumbers)
         )
         data = dict(zip(TeamAggregator.team_columns, vals))
         normalizer = pd.DataFrame(data, index=self.df.index, columns=TeamAggregator.team_columns)

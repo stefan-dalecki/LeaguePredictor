@@ -86,6 +86,7 @@ URLS = {
 
 NUMBER_PLAYERS = 10 
 PLAYERS = range(1, NUMBER_PLAYERS+1)
+GAME_DURATION = 30 * 60 * 1000 # 30 Minutes * Seconds/Min * Miliseconds/second
 
 class TeamNumbers(IntEnum):
     TEAM1 = 100
