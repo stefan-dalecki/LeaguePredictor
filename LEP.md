@@ -16,9 +16,6 @@ the user's interest and the priority of the task as to which tasks get done, whe
 The initial author of this module is relatively junior and so is using this as a learning opportunity. With that in mind, there are several areas of improvement that can be made to the code structure and quality. Some initial changes that should be implemented (in no particular order) are:
 * Turning this module into a package and making it availabel on [pypi](https://pypi.org/)
 * Remove magic numbers
-* Address all typing issues from pylint
-* Make the model functions more separated
-    * Have them not directly affect the instance dataframe
 * General formatting and readability improvements
 * Adding testing to run with nox on each push
 

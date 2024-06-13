@@ -168,22 +168,23 @@ class TeamAggregator(DataAggregator):
         self.df = pd.DataFrame(
             columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
         )
-        self.outcomes = pd.DataFrame(columns=["outcome"], index=TeamAggregator.multi_index)
+        self.outcomes = pd.Series(index=TeamAggregator.multi_index)
         super().__init__()
 
     @staticmethod
-    def add_frame(df: pd.DataFrame, idx: tuple[str, str], frame: dict) -> None:  # pd.DataFrame:
-        # TODO: This doesn't actually need to know about the dataframe. It should just return an ordered series that we add to the df in the add_game function
+    def add_frame(frame: dict) -> pd.Series:
         events = frame.get("events") or []
         player_frames = frame.get("participantFrames") or {}
 
-        df.loc[idx, :] = 0
+        frame_series = pd.Series(data=0, index=TeamAggregator.team_columns)
 
         # Add data from player snapshots
         for player in player_frames.values():
             team = PLAYER_TEAM_MAP[player["participantId"]]
-            df.loc[idx, f"cs_{team}"] += player["jungleMinionsKilled"] + player["minionsKilled"]
-            df.loc[idx, f"gold_{team}"] += player["totalGold"]
+            frame_series.loc[f"cs_{team}"] += (
+                player["jungleMinionsKilled"] + player["minionsKilled"]
+            )
+            frame_series.loc[f"gold_{team}"] += player["totalGold"]
             # TODO: XP could be added here, but likely won't be a driving factor until there is a sizeable xp diff
             # Would maybe be easier to do with just lv difference, but at a minute scale it would be hard
             # To catch the difference
@@ -202,10 +203,10 @@ class TeamAggregator(DataAggregator):
             # CONTINUE HERE
             if event_type == "ELITE_MONSTER_KILL":
                 monster = TeamAggregator.event_map[event_type][event["monsterType"]]
-                df.loc[idx, f"{monster}_{team}"] += 1
+                frame_series.loc[f"{monster}_{team}"] += 1
             if event_type == "BUILDING_KILL":
                 monster = TeamAggregator.event_map[event_type][event["buildingType"]]
-                df.loc[idx, f"{monster}_{team}"] += 1
+                frame_series.loc[f"{monster}_{team}"] += 1
             if event_type == "CHAMPION_KILL":
                 killed_team = PLAYER_TEAM_MAP[event["victimId"]]
                 if killed_team == team:
@@ -214,17 +215,18 @@ class TeamAggregator(DataAggregator):
                     )
                 # assert killed_team != team
 
-                df.loc[idx, f"kills_{team}"] += 1
-                df.loc[idx, f"assists_{team}"] += len(event.get("assistingParticipantIds", []))
-                df.loc[idx, f"deaths_{killed_team}"] += 1
+                frame_series.loc[f"kills_{team}"] += 1
+                frame_series.loc[f"assists_{team}"] += len(event.get("assistingParticipantIds", []))
+                frame_series.loc[f"deaths_{killed_team}"] += 1
+        return frame_series
 
     @staticmethod
-    def format_game(game: dict[str, dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def format_game(game: dict[str, dict]) -> tuple[pd.DataFrame, pd.Series]:
 
         game_df = pd.DataFrame(
             columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
         )
-        outcomes = pd.DataFrame(columns=["outcome"], index=TeamAggregator.multi_index)
+        outcomes = pd.Series(index=TeamAggregator.multi_index)
 
         game_id = game["info"]["gameId"]
         frames = game["info"]["frames"]
@@ -235,39 +237,42 @@ class TeamAggregator(DataAggregator):
             # Normalize the timestamp here since it is also the index and would be difficult to
             # modify later
             idx = (game_id, frame["timestamp"] / GAME_DURATION)
-            TeamAggregator.add_frame(game_df, idx, frame)
+            game_df.loc[idx, :] = TeamAggregator.add_frame(frame)
             outcomes.loc[idx, "outcome"] = winner / TeamNumbers.TEAM1 - 1
         game_df.loc[:, TeamAggregator.cum_columns] = game_df.loc[:, TeamAggregator.cum_columns].agg(
-            np.cumsum
+            "cumsum"
         )
         return game_df, outcomes
 
     def format_json(self, raw_data: dict[str, dict]) -> None:
+        games_list = []
+        outcomes_list = []
         for game in raw_data.values():
             try:
-                game_df, outcome_df = self.format_game(game)
+                game_df, outcomes = self.format_game(game)
             except KeyError:
                 # The format of the game was malformed (eg we got a message in our json instead of a game)
                 continue
-            self.df = pd.concat([self.df, game_df])
-            self.outcomes = pd.concat([self.outcomes, outcome_df])
-        # TODO: Explore how aggregation of the results changes the outcomes
+            games_list.append(game_df)
+            outcomes_list.append(outcomes)
+        self.df = pd.concat([self.df] + games_list)
+        self.outcomes = pd.concat([self.outcomes] + outcomes_list)
 
-    def normalize(self):
+    @staticmethod
+    def normalize(df):
         vals = np.repeat(
             [param["norm_val"] for param in TeamAggregator.standard_values.values()],
             len(TeamNumbers),
         )
         data = dict(zip(TeamAggregator.team_columns, vals))
-        normalizer = pd.DataFrame(data, index=self.df.index, columns=TeamAggregator.team_columns)
+        normalizer = pd.DataFrame(data, index=df.index, columns=TeamAggregator.team_columns)
 
-        # Assume we can get the data into a pandas dataframe with the same columsn
-
-        self.df = self.df.div(normalizer)
+        return df.div(normalizer)
 
     def prepare_train(self) -> tuple[np.ndarray, np.ndarray]:
-        X = self.df.reset_index().drop("game_id", axis=1).values
-        y = self.outcomes.values.reshape((len(self.outcomes),)).astype(int)
+        normalized_df = self.normalize(self.df)
+        X = normalized_df.reset_index().drop("game_id", axis=1).values
+        y = self.outcomes.values.astype(int)
         return X, y
 
 

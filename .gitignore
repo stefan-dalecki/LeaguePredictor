@@ -10,3 +10,6 @@ venv*
 
 # cython files
 *.pyc
+
+# Logs
+*.log
