@@ -1,8 +1,11 @@
+import json
 import logging
 import logging.config
 import requests
-import json
+import time
+from functools import wraps
 from pathlib import Path
+from requests.exceptions import HTTPError
 
 from leaguepy.src.constants import (
     Region,
@@ -18,6 +21,42 @@ from leaguepy.src.constants import (
 logging.config.dictConfig(DEFAULT_LOGGER_CONFIG)
 logger = logging.getLogger(__name__)
 
+# 20 requests/second and 100 requests/120 seconds
+DEFAULT_WAIT = 60  # Seconds
+
+
+def retry_on_rate_limit(retry_wait_time=DEFAULT_WAIT):
+    """
+    Decorator that retries the function if an API rate limit (HTTP 429) is encountered.
+
+    Args:
+    - retry_wait_time (int): The time to wait before retrying if the API rate limit is exceeded (in seconds).
+
+    Returns:
+    - Decorated function with retry logic.
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            while True:
+                try:
+                    response = func(*args, **kwargs)
+                    response.raise_for_status()  # Will raise an HTTPError for bad responses (4xx, 5xx)
+                    return response
+                except HTTPError as http_err:
+                    if http_err.response.status_code == 429:
+                        logger.warning(
+                            f"Rate limit exceeded. Retrying in {retry_wait_time} seconds..."
+                        )
+                        time.sleep(retry_wait_time)
+                    else:
+                        raise http_err
+
+        return wrapper
+
+    return decorator
+
 
 def write_if_not_none(data, filename: Path | None = None) -> None:
     if data is not None:
@@ -25,47 +64,46 @@ def write_if_not_none(data, filename: Path | None = None) -> None:
             json.dump(data, outfile)
 
 
-def get_puuid(username: str, country: Country = Country.KOREA, filename: Path | None = None):
+@retry_on_rate_limit()
+def pull_puuid(username: str, country: Country = Country.KOREA) -> requests.Response:
     URL = URLS["puuid"]
     response = requests.get(
         URL.format(country=country.value, username=username), params=RIOT_PARAMS
     )
     logger.info(f"PUUID Retrieval Status Code: {response.status_code}")
-    write_if_not_none(response.json(), filename)
-    return response.json()["puuid"]
+    return response
 
 
+@retry_on_rate_limit()
 def get_match_history(
     puuid: str,
     region: Region = Region.ASIA,
     type: MatchType = MatchType.NORMAL,
     start: int = 0,
     count: int = 20,
-    filename: Path | None = None,
-) -> dict:
+) -> requests.Response:
     URL = URLS["match_hist"]
+    logger.info(f"Pulling match history for puuid: {puuid}")
     response = requests.get(
-        URL.format(region=region.value, puuid=puuid, type=type.value, start=start, count=count),
+        URL.format(region=region, puuid=puuid, type=type, start=start, count=count),
         params=RIOT_PARAMS,
     )
-    logger.info(f"Match History Retrieval Status Code: {response.status_code}")
-    write_if_not_none(response.json(), filename)
-    return response.json()
+    return response
 
 
-def get_timeline(match_id: str, region: Region = Region.ASIA, filename: Path | None = None) -> dict:
+@retry_on_rate_limit()
+def get_timeline(match_id: str, region: Region = Region.ASIA) -> requests.Response:
     URL = URLS["timeline"]
+    logger.info(f"Pulling timeline for match_id: {match_id}")
     response = requests.get(URL.format(region=region.value, match_id=match_id), params=RIOT_PARAMS)
-    logger.info(f"Timeline Retrieval Status Code: {response.status_code}")
-    write_if_not_none(response.json(), filename)
-    return response.json()
+    return response
 
 
+@retry_on_rate_limit()
 def get_game_history(
     username: str,
     country: Country = Country.KOREA,
     region: Region = Region.ASIA,
-    filename: Path | None = None,
     **args,
 ) -> dict:
     """This function takes a username and pulls the time series for their last 20 games and puts it into a json
@@ -79,34 +117,28 @@ def get_game_history(
     Returns:
         dict: a dictionary of timeseries of (up to) the last 20 games
     """
-    puuid = get_puuid(username, country)
-    match_history = get_match_history(puuid, region=region, **args)
+    puuid = pull_puuid(username, country).json()["puuid"]
+    match_history = get_match_history(puuid, region=region, **args).json()
     timeseries = dict()
     for i, match in enumerate(match_history):
-        # TODO: Have the functions return codes as well to indicate if we should wait
-        timeseries[i] = get_timeline(match, region=region)
+        timeseries[i] = get_timeline(match, region=region).json()
 
-    write_if_not_none(timeseries, filename)
     return timeseries
 
 
 # TODO: This code doesn't have a way of systematically retrieving different data. right now if we ran get_game_history it would grab 20 games and forever grab the same games. We need a way to systematically grab other data for the same players
 if __name__ == "__main__":
-    import time
 
     DIR = Path(
-        r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\data\raw"
+        r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\leaguepy\data\raw"
     )
     for i in range(20):
-        get_game_history(
-            "is this a ward",
-            country=Country.NORTH_AMERICA,
-            region=Region.AMERICAS,
-            filename=DIR / f"personal_norms_data_{2+i}.json",
+        game_history = get_game_history(
+            "faker",
+            country=Country.KOREA,
+            region=Region.ASIA,
             type=MatchType.NORMAL,
-            start=200 + i * 100,
+            start=i * 100,
             count=100,
         )
-        import time
-
-        time.sleep(10)
+        write_if_not_none(game_history, DIR / f"faker_norms_data_v2_{i}.json")

@@ -17,7 +17,10 @@ The initial author of this module is relatively junior and so is using this as a
 * Turning this module into a package and making it availabel on [pypi](https://pypi.org/)
 * Remove magic numbers
 * General formatting and readability improvements
-* Adding testing to run with nox on each push
+* Adding testing
+* Run a rudimentary CI/CD pipeline with nox on each push
+* Adding Sonar or other code linting/scoring programs
+* Making API calls into Async
 
 ### Model improvement
 * Expand data volume to improve model prediction quality
