@@ -9,7 +9,6 @@ from requests.exceptions import HTTPError
 
 from leaguepy.src.constants import (
     Region,
-    Country,
     MatchType,
     URLS,
     RIOT_PARAMS,
@@ -65,10 +64,10 @@ def write_if_not_none(data, filename: Path | None = None) -> None:
 
 
 @retry_on_rate_limit()
-def pull_puuid(username: str, country: Country = Country.KOREA) -> requests.Response:
+def pull_puuid(username: str, tagline: str, region: Region = Region.ASIA) -> requests.Response:
     URL = URLS["puuid"]
     response = requests.get(
-        URL.format(country=country.value, username=username), params=RIOT_PARAMS
+        URL.format(region=region.value, username=username, tagline=tagline), params=RIOT_PARAMS
     )
     logger.info(f"PUUID Retrieval Status Code: {response.status_code}")
     return response
@@ -99,10 +98,9 @@ def get_timeline(match_id: str, region: Region = Region.ASIA) -> requests.Respon
     return response
 
 
-@retry_on_rate_limit()
 def get_game_history(
     username: str,
-    country: Country = Country.KOREA,
+    tagline: str,
     region: Region = Region.ASIA,
     **args,
 ) -> dict:
@@ -117,7 +115,7 @@ def get_game_history(
     Returns:
         dict: a dictionary of timeseries of (up to) the last 20 games
     """
-    puuid = pull_puuid(username, country).json()["puuid"]
+    puuid = pull_puuid(username, tagline, region).json()["puuid"]
     match_history = get_match_history(puuid, region=region, **args).json()
     timeseries = dict()
     for i, match in enumerate(match_history):
@@ -134,11 +132,11 @@ if __name__ == "__main__":
     )
     for i in range(20):
         game_history = get_game_history(
-            "faker",
-            country=Country.KOREA,
-            region=Region.ASIA,
+            "isthisaward",
+            "NA1",
+            region=Region.AMERICAS,
             type=MatchType.NORMAL,
             start=i * 100,
             count=100,
         )
-        write_if_not_none(game_history, DIR / f"faker_norms_data_v2_{i}.json")
+        write_if_not_none(game_history, DIR / f"personal_norms_data_v2_{i}.json")

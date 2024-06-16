@@ -44,11 +44,11 @@ API_KEY = os.getenv("RIOT_API_KEY")
 
 
 RIOT_PARAMS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
-    "Origin": "https://developer.riotgames.com",
-    "X-Riot-Token": f"{API_KEY}",
+    # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+    # "Accept-Language": "en-US,en;q=0.9",
+    # "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
+    # "Origin": "https://developer.riotgames.com",
+    # "X-Riot-Token": f"{API_KEY}",
     "api_key": f"{API_KEY}",
 }
 
@@ -74,7 +74,7 @@ class MatchType(str, Enum):
 
 
 URLS = {
-    "puuid": "https://{country}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{username}",
+    "puuid": "https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{username}/{tagline}",
     "match_hist": "https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type={type}&start={start}&count={count}",
     "timeline": "https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline",
 }
