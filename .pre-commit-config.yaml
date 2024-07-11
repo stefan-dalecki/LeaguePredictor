@@ -1,24 +1,4 @@
-- id: pants-fmt
-  name: pants fmt
-  always_run: false
-  description: runs ./pants fmt on python files
-  entry: ./pants --no-dynamic-ui fmt
-  language: system
-  pass_filenames: true
-  types: [file, python]
-- id: pants-lint
-  name: pants lint
-  always_run: false
-  description: runs ./pants --no-dynamic-ui lint on python files
-  entry: ./pants lint
-  language: system
-  pass_filenames: true
-  types: [file, python]
-- id: pants-check
-  name: pants check
-  always_run: false
-  description: runs ./pants --no-dynamic-ui check on python files
-  entry: ./pants check
-  language: system
-  pass_filenames: true
-  types: [file, python]
+- repo: https://github.com/rcuza/pants-pre-commit-hooks
+  rev: v0.1.0
+  hooks:
+    - id: pants-lint
