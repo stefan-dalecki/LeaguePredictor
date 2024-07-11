@@ -64,10 +64,13 @@ def write_if_not_none(data, filename: Path | None = None) -> None:
 
 
 @retry_on_rate_limit()
-def pull_puuid(username: str, tagline: str, region: Region = Region.ASIA) -> requests.Response:
+def pull_puuid(
+    username: str, tagline: str, region: Region = Region.ASIA
+) -> requests.Response:
     URL = URLS["puuid"]
     response = requests.get(
-        URL.format(region=region.value, username=username, tagline=tagline), params=RIOT_PARAMS
+        URL.format(region=region.value, username=username, tagline=tagline),
+        params=RIOT_PARAMS,
     )
     logger.info(f"PUUID Retrieval Status Code: {response.status_code}")
     return response
@@ -94,7 +97,9 @@ def get_match_history(
 def get_timeline(match_id: str, region: Region = Region.ASIA) -> requests.Response:
     URL = URLS["timeline"]
     logger.info(f"Pulling timeline for match_id: {match_id}")
-    response = requests.get(URL.format(region=region.value, match_id=match_id), params=RIOT_PARAMS)
+    response = requests.get(
+        URL.format(region=region.value, match_id=match_id), params=RIOT_PARAMS
+    )
     return response
 
 
@@ -126,7 +131,6 @@ def get_game_history(
 
 # TODO: This code doesn't have a way of systematically retrieving different data. right now if we ran get_game_history it would grab 20 games and forever grab the same games. We need a way to systematically grab other data for the same players
 if __name__ == "__main__":
-
     DIR = Path(
         r"C:\Users\jonhuster\Desktop\General\Personal\Projects\Python\LeaguePredictor\leaguepy\data\raw"
     )

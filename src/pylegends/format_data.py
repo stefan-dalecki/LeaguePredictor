@@ -38,7 +38,6 @@ class DataAggregator(ABC):
 
 
 class DummyData(DataAggregator):
-
     col_names = ["something", "other"]
 
     @staticmethod
@@ -60,7 +59,9 @@ class TeamAggregator(DataAggregator):
     index = ["game_id", "timestamp"]
     standard_values = {
         "cs": {  # Could instead normalize to CS per minute
-            "norm_val": 10 * 30 * 5,  # 10 CS per minute * 30 minute games * 5 team members
+            "norm_val": 10
+            * 30
+            * 5,  # 10 CS per minute * 30 minute games * 5 team members
             "pre_agg": True,
             "event_map": None,
         },
@@ -195,7 +196,11 @@ class TeamAggregator(DataAggregator):
             if event_type not in TeamAggregator.event_map:
                 continue
             try:
-                team = event["teamId"] if "teamId" in event else PLAYER_TEAM_MAP[event["killerId"]]
+                team = (
+                    event["teamId"]
+                    if "teamId" in event
+                    else PLAYER_TEAM_MAP[event["killerId"]]
+                )
             except KeyError:
                 # Event not affiliated with a team. Skip to next
                 continue
@@ -216,13 +221,14 @@ class TeamAggregator(DataAggregator):
                 # assert killed_team != team
 
                 frame_series.loc[f"kills_{team}"] += 1
-                frame_series.loc[f"assists_{team}"] += len(event.get("assistingParticipantIds", []))
+                frame_series.loc[f"assists_{team}"] += len(
+                    event.get("assistingParticipantIds", [])
+                )
                 frame_series.loc[f"deaths_{killed_team}"] += 1
         return frame_series
 
     @staticmethod
     def format_game(game: dict[str, dict]) -> tuple[pd.DataFrame, pd.Series]:
-
         game_df = pd.DataFrame(
             columns=TeamAggregator.team_columns, index=TeamAggregator.multi_index
         )
@@ -239,9 +245,9 @@ class TeamAggregator(DataAggregator):
             idx = (game_id, frame["timestamp"] / GAME_DURATION)
             game_df.loc[idx, :] = TeamAggregator.add_frame(frame)
             outcomes.loc[idx, "outcome"] = winner / TeamNumbers.TEAM1 - 1
-        game_df.loc[:, TeamAggregator.cum_columns] = game_df.loc[:, TeamAggregator.cum_columns].agg(
-            "cumsum"
-        )
+        game_df.loc[:, TeamAggregator.cum_columns] = game_df.loc[
+            :, TeamAggregator.cum_columns
+        ].agg("cumsum")
         return game_df, outcomes
 
     def format_json(self, raw_data: dict[str, dict]) -> None:
@@ -265,7 +271,9 @@ class TeamAggregator(DataAggregator):
             len(TeamNumbers),
         )
         data = dict(zip(TeamAggregator.team_columns, vals))
-        normalizer = pd.DataFrame(data, index=df.index, columns=TeamAggregator.team_columns)
+        normalizer = pd.DataFrame(
+            data, index=df.index, columns=TeamAggregator.team_columns
+        )
 
         return df.div(normalizer)
 

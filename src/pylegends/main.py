@@ -29,7 +29,9 @@ if __name__ == "__main__":
     logger.info(f"Reading data from {data_dir}")
     for j in range(3):
         logger.info(f"Processing file {j+1} of 3")
-        with open(data_dir / f"faker_norms_data_{j}.json", encoding="utf8") as json_file:
+        with open(
+            data_dir / f"faker_norms_data_{j}.json", encoding="utf8"
+        ) as json_file:
             data = json.load(json_file)
         model.format_json(data)  # Add the data to the model
         del data

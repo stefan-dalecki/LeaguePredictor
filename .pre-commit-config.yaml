@@ -1,14 +1,24 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
-repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
-    hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
-    -   id: check-added-large-files
--   repo: https://github.com/psf/black
-    rev: 22.10.0
-    hooks:
-    -   id: black
+- id: pants-fmt
+  name: pants fmt
+  always_run: false
+  description: runs ./pants fmt on python files
+  entry: ./pants --no-dynamic-ui fmt
+  language: system
+  pass_filenames: true
+  types: [file, python]
+- id: pants-lint
+  name: pants lint
+  always_run: false
+  description: runs ./pants --no-dynamic-ui lint on python files
+  entry: ./pants lint
+  language: system
+  pass_filenames: true
+  types: [file, python]
+- id: pants-check
+  name: pants check
+  always_run: false
+  description: runs ./pants --no-dynamic-ui check on python files
+  entry: ./pants check
+  language: system
+  pass_filenames: true
+  types: [file, python]
